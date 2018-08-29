@@ -2,6 +2,17 @@
     background-color: rgb(245, 245, 245);
 }
 
+html,body {
+    height: 100%;
+    background-color: #E6ECF0;
+}
+
+.container {
+    height: 100%;
+    width: 60%;
+    background-color: #fff;
+  }
+
 .text-wrap-break {
     word-wrap: break-word;
 }
