@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}
+&#123; AMA &#125; - Sign In
+{% endblock %}
+
+{% block page_content %}
+<div class="container text-center">
+    <form class="form-signin" style="padding-top: 160px" method="POST" action="">
+        <h1>&#123; AMA &#125;</h1>
+        <h3 style="margin-bottom: 20px;">Please Sign In</h3>
+        {{ form.csrf_token }}
+        {{ form.username(class='form-control offset-md-4 col-md-4', placeholder='username') }}
+        {{ form.password(class='form-control offset-md-4 col-md-4', type='password', placeholder='password') }}
+        <div class="form-check" style="margin-top: 20px">
+            {{ form.remember_me(class='form-check-input', type='checkbox', id='remember-me') }}
+            <label class="form-check-label" for="remember-me">
+                Remember Me
+            </label>
+        </div>
+        {{ form.submit(class='btn btn-lg btn-primary col-md-4', type='submit', style='margin-top: 30px') }}
+    </form>
+</div>
+{% endblock %}
+
+{% block unit_test %}
+<input type="hidden" value="testing-signin-AMA">
+{% endblock %}
