@@ -64,3 +64,20 @@ class TestAuthViews(unittest.TestCase):
 
                 response = app_test_client.get(url_for('auth.signout'), follow_redirects=True)
                 self.assertTrue('testing-signin-AMA' in response.get_data(as_text=True))
+
+    def test_signup(self):
+        """ add user to the database and redirect him to login page """
+        with self.app.test_request_context():
+            with self.app.test_client() as app_test_client:
+                ''' get the signup page '''
+                resposne = app_test_client.get(url_for('auth.signup'))
+                self.assertTrue('testing-signup-AMA' in resposne.get_data(as_text=True))
+
+                resposne = app_test_client.post(url_for('auth.signup'), data={
+                        'username': 'testuser', 'password': '123', 'email': 'testuser@mail.com'},
+                        follow_redirects=True)
+                self.assertTrue('testing-signin-AMA' in resposne.get_data(as_text=True))
+
+                ''' user added to the database ?'''
+                test_user = User.query.get(1)
+                self.assertIsNotNone(test_user)

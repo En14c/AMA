@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% import 'macros/get_flashed_messages.html' as flashed_messages %}
+
+{% block title %}
+&#123; AMA &#125; - Sign Up
+{% endblock %}
+
+{% block page_content %}
+<div class="container text-center">
+    {{ flashed_messages.get_flashed_info_messages(class='alert alert-info alert-dismissible fade show alert-msg-box') }}
+    {{ flashed_messages.get_flashed_error_messages(class='alert alert-danger alert-dismissible fade show alert-msg-box') }}
+    
+    <form class="form-signin" style="padding-top: 160px" method="POST" action="">
+        <h1>&#123; AMA &#125;</h1>
+        <h3 style="margin-bottom: 20px;">Sign Up</h3>
+        {{ form.csrf_token }}
+        {{ form.username(class='form-control offset-md-4 col-md-4', placeholder='username') }}
+        {{ form.email(class='form-control offset-md-4 col-md-4', type='email', placeholder='email') }}
+        {{ form.password(class='form-control offset-md-4 col-md-4', type='password', placeholder='password') }}
+        {{ form.submit(class='btn btn-lg btn-primary col-md-4', type='submit', style='margin-top: 30px') }}
+    </form>
+    
+    <p style="padding-top: 10px">
+        Already have an account ? 
+        <a href="{{ url_for('auth.signin') }}">Sign In</a>
+    </p>
+</div>
+{% endblock %}
+
+{% block unit_test %}
+<input type="hidden" value="testing-signup-AMA">
+{% endblock %}%                                                                                                                         

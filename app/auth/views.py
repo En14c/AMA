@@ -1,9 +1,9 @@
 from urllib.parse import urlparse
 from flask import url_for, request, redirect, render_template, flash
 from flask_login import current_user, login_user, logout_user, login_required
-from .. import app_login_manager
+from .. import app_login_manager, app_database
 from ..models import User
-from .forms import SignInForm
+from .forms import SignInForm, SignUpForm
 from . import auth
 
 
@@ -29,7 +29,19 @@ def signin():
             return redirect(request.args.get('next') or url_for('main.home'))
         flash('invalid username or password', category='error')
     return render_template('auth/signin.html', form=signin_form)
-   
+
+
+@auth.route('/signup', methods=['GET', 'POST'])
+def signup():
+    signup_form = SignUpForm()
+    if signup_form.validate_on_submit():
+        new_user = User(username=signup_form.username.data, email=signup_form.email.data,
+                        password=signup_form.password.data)
+        app_database.session.add(new_user)
+        flash('you are now registered .. you can login now', category='info')
+        return redirect(url_for('auth.signin'))
+    return render_template('auth/signup.html', form=signup_form)
+
 
 @auth.route('/signout')
 @login_required
