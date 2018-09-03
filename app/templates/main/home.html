@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% import 'macros/get_flashed_messages.html' as flashed_messages %}
 
 {% block title %} &#123; AMA &#125; - Home {% endblock %}
 
@@ -9,6 +10,12 @@
 
 {% block page_content %}
     {{ super() }}
+
+    <div class="container text-center">
+        {{ flashed_messages.get_flashed_info_messages(class='alert alert-info alert-dismissible fade show') }}
+        {{ flashed_messages.get_flashed_error_messages(class='alert alert-danger alert-dismissible fade show') }}
+    </div>
+            
     <div class="container">
         AMA Home
     </div>
