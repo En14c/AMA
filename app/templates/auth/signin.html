@@ -7,8 +7,8 @@
 
 {% block page_content %}
 <div class="container text-center">
-    {{ flashed_messages.get_flashed_info_messages(class='alert alert-info alert-dismissible fade show') }}
-    {{ flashed_messages.get_flashed_error_messages(class='alert alert-danger alert-dismissible fade show') }}
+    {{ flashed_messages.get_flashed_info_messages(class='alert alert-info alert-dismissible fade show alert-msg-box-fixed') }}
+    {{ flashed_messages.get_flashed_error_messages(class='alert alert-danger alert-dismissible fade show alert-msg-box-fixed') }}
     
     <form class="form-signin" style="padding-top: 160px" method="POST" action="">
         <h1>&#123; AMA &#125;</h1>
