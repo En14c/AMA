@@ -1,0 +1,29 @@
+{% macro get_flashed_error_messages(class) %}
+    {% with errors = get_flashed_messages(category_filter=['error']) %}
+        {% if errors %}
+            {% for error in errors %}
+            <div class="{{ class }}" role="alert">
+                {{ error }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endfor %}    
+        {% endif %}
+    {% endwith %}
+{% endmacro %}
+
+{% macro get_flashed_info_messages(class) %}
+    {% with info_messages = get_flashed_messages(category_filter=['info']) %}
+        {% if info_messages %}
+            {% for info_message in info_messages %}
+            <div class="{{ class }}" role="alert">
+                {{ info_message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+{% endmacro %}
