@@ -7,11 +7,11 @@ html,body {
     background-color: #E6ECF0;
 }
 
-.container {
+.page-content {
     height: 100%;
     width: 60%;
     background-color: #fff;
-  }
+}
 
 .text-wrap-break {
     word-wrap: break-word;
