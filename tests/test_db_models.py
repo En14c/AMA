@@ -1,4 +1,4 @@
-import unittest
+import unittest, time
 from app import create_app, app_database
 from app.models import User
 from confg import app_config
@@ -35,3 +35,24 @@ class TestUserModel(unittest.TestCase):
         user.password = 'testpassword'
         self.assertFalse(user.check_password('testpassword1234'))
         self.assertTrue(user.check_password('testpassword')) 
+
+    def test_confirmation_token(self):
+        """ test valid, invalid or expired confirmation token """
+        testuser1 = User()
+        app_database.session.add(testuser1)
+        app_database.session.commit()
+
+        #test valid confirmation token
+        token = testuser1.create_confirmation_token()
+        self.assertTrue(testuser1.verify_confirmation_token(token))
+
+        #test invalid confirmation token
+        token = testuser1.create_confirmation_token()
+        testuser1.id = 2
+        self.assertFalse(testuser1.verify_confirmation_token(token))
+
+        #test expired confirmation token
+        token = testuser1.create_confirmation_token(exp=0)
+        time.sleep(1)
+        self.assertFalse(testuser1.verify_confirmation_token(token))
+                
