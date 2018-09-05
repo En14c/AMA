@@ -14,9 +14,29 @@
         <h1>&#123; AMA &#125;</h1>
         <h3 style="margin-bottom: 20px;">Sign Up</h3>
         {{ form.csrf_token }}
-        {{ form.username(class='form-control offset-md-4 col-md-4', placeholder='username') }}
-        {{ form.email(class='form-control offset-md-4 col-md-4', type='email', placeholder='email') }}
-        {{ form.password(class='form-control offset-md-4 col-md-4', type='password', placeholder='password') }}
+        <div class="row">
+            {{ form.username(class='form-control offset-md-4 col-md-4', placeholder='username') }}
+            <div class="col-md-4 text-left">
+                <span style="color: #ff0000; font-size: 18px">
+                {% for error in form.username.errors %}
+                    {{ error }}
+                {% endfor %}
+                </span>
+            </div>
+        </div>
+        <div class="row">
+            {{ form.email(class='form-control offset-md-4 col-md-4', type='email', placeholder='email') }}
+            <div class="col-md-4 text-left">
+                <span style="color: #ff0000; font-size: 18px">
+                {% for error in form.email.errors %}
+                    {{ error }}
+                {% endfor %}
+                </span>
+            </div>
+        </div>
+        <div class="row">
+            {{ form.password(class='form-control offset-md-4 col-md-4', type='password', placeholder='password') }}
+        </div>
         {{ form.submit(class='btn btn-lg btn-primary col-md-4', type='submit', style='margin-top: 30px') }}
     </form>
     
