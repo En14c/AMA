@@ -26,7 +26,7 @@ class TestMainViews(unittest.TestCase):
                 response = app_test_client.get(url_for('main.home'))
                 self.assertTrue(response.status_code == 302)
         
-        testuser = User(username='testuser')
+        testuser = User(username='testuser', account_confirmed=True)
         testuser.password = '123'
         app_database.session.add(testuser)
         app_database.session.commit()

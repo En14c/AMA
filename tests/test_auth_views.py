@@ -23,7 +23,7 @@ class TestAuthViews(unittest.TestCase):
             - logging users in and redirecting to home page
             - next query * if present * does not redirect to external websites
         """
-        testuser = User(username='testuser')
+        testuser = User(username='testuser', account_confirmed=True)
         testuser.password = '123'
         app_database.session.add(testuser)
         app_database.session.commit()
