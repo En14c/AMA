@@ -7,10 +7,10 @@
 
 {% block page_content %}
 <div class="container text-center">
-    {{ flashed_messages.get_flashed_info_messages(class='alert alert-info alert-dismissible fade show alert-msg-box') }}
-    {{ flashed_messages.get_flashed_error_messages(class='alert alert-danger alert-dismissible fade show alert-msg-box') }}
+    {{ flashed_messages.get_flashed_info_messages(class='alert alert-info alert-dismissible fade show alert-msg-box-fixed') }}
+    {{ flashed_messages.get_flashed_error_messages(class='alert alert-danger alert-dismissible fade show alert-msg-box-fixed') }}
     
-    <form class="form-signin" style="padding-top: 160px" method="POST" action="">
+    <form style="padding-top: 160px" method="POST" action="">
         <h1>&#123; AMA &#125;</h1>
         <h3 style="margin-bottom: 20px;">Sign Up</h3>
         {{ form.csrf_token }}
@@ -37,7 +37,9 @@
         <div class="row">
             {{ form.password(class='form-control offset-md-4 col-md-4', type='password', placeholder='password') }}
         </div>
-        {{ form.submit(class='btn btn-lg btn-primary col-md-4', type='submit', style='margin-top: 30px') }}
+        <div class="row">
+        {{ form.submit(class='btn btn-lg btn-primary offset-md-4 col-md-4', type='submit', style='margin-top: 30px') }}
+        </div>
     </form>
     
     <p style="padding-top: 10px">
@@ -49,4 +51,4 @@
 
 {% block unit_test %}
 <input type="hidden" value="testing-signup-AMA">
-{% endblock %}%                                                                                                                         
+{% endblock %}                                                                                                                 
