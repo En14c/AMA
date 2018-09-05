@@ -5,11 +5,19 @@ from .. import app_login_manager, app_database
 from ..models import User
 from .forms import SignInForm, SignUpForm
 from . import auth
+from ..email import send_mail
 
 
 @app_login_manager.user_loader
 def load_user_object(id):
     return User.query.get(int(id))
+
+
+@auth.before_app_request
+def intercept_request():
+    if current_user.is_authenticated and not current_user.account_confirmed \
+            and not (request.path.startswith('/auth') or request.path.startswith('/static')):
+        return redirect(url_for('auth.unconfirmed_account'))
 
 
 @auth.route('/signin', methods=['GET', 'POST'])
@@ -38,6 +46,10 @@ def signup():
         new_user = User(username=signup_form.username.data, email=signup_form.email.data,
                         password=signup_form.password.data)
         app_database.session.add(new_user)
+        app_database.session.commit() #new_user object gets assigned an id after a database transaction
+        confirmation_token = new_user.create_confirmation_token()
+        send_mail('Account Confirmation', to=new_user.email, template='email/confirmation_mail.txt',
+                  confirmation_token=confirmation_token, user=new_user)
         flash('you are now registered .. you can login now', category='info')
         return redirect(url_for('auth.signin'))
     return render_template('auth/signup.html', form=signup_form)
@@ -49,3 +61,33 @@ def signout():
     logout_user()
     flash('you have been logged out successfully', category='info')
     return redirect(url_for('auth.signin'))
+
+
+@auth.route('/account_confirmation/<confirmation_token>')
+@login_required
+def confirm_account(confirmation_token):
+    #user clicks the link more than once
+    if current_user.account_confirmed:
+        return redirect(url_for('main.home'))
+    if current_user.verify_confirmation_token(confirmation_token):
+        flash('you have confirmed your account', category='info')
+    else:
+        flash('your confirmation link has expired', category='errors')
+    return redirect(url_for('main.home'))
+
+
+@auth.route('/account_confirmation/resend_confirmation_email')
+@login_required
+def resend_account_confirmation_email():
+    confirmation_token = current_user.create_confirmation_token()
+    send_mail('Account Confirmation', to=current_user.email, template='email/confirmation_mail.txt',
+              confirmation_token=confirmation_token, user=current_user)
+    flash('an account confirmation email has been sent to you', category='info')
+    return redirect(url_for('main.home'))
+
+@auth.route('/unconfirmed_account')
+@login_required
+def unconfirmed_account():
+    if current_user.account_confirmed:
+        return redirect(url_for('main.home'))
+    return render_template('auth/unconfirmed_account.html', user=current_user)

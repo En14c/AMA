@@ -1,0 +1,5 @@
+hi {{ user.username }}
+
+click on the following link to confirm your account
+
+{{ url_for('auth.confirm_account', confirmation_token=confirmation_token , _external=True) }}

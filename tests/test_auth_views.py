@@ -1,4 +1,4 @@
-import unittest
+import unittest, time
 from flask import url_for
 from app import create_app, app_database
 from app.models import User
@@ -81,3 +81,43 @@ class TestAuthViews(unittest.TestCase):
                 ''' user added to the database ?'''
                 test_user = User.query.get(1)
                 self.assertIsNotNone(test_user)
+
+    def test_confirm_account(self):
+        '''
+        test 3 cases:
+            [1] account already confirmed
+            [2] confirmation link is valid
+            [3] confirmation link is invalid or has expired
+        '''
+        testuser = User(username='testuser', email=self.app.config['MAIL_SENDER'],
+                        account_confirmed=True)
+        testuser.password = '123'
+        app_database.session.add(testuser)
+        app_database.session.commit()
+
+        with self.app.test_request_context():
+            with self.app.test_client() as app_test_client:
+                #login 
+                app_test_client.post(url_for('auth.signin'), data={'username': 'testuser',
+                                                                   'password': '123'})
+                
+                #case [1]
+                token = testuser.create_confirmation_token(exp=0)
+                response = app_test_client.get(url_for('auth.confirm_account', confirmation_token=token), 
+                                               follow_redirects=True)
+                self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
+
+                #case [2]
+                testuser.account_confirmed = False
+                token = testuser.create_confirmation_token(exp=180)
+                response = app_test_client.get(url_for('auth.confirm_account', confirmation_token=token), 
+                                               follow_redirects=True)
+                self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
+
+                #case [3]
+                testuser.account_confirmed = False
+                token = testuser.create_confirmation_token(exp=0)
+                time.sleep(2)
+                response = app_test_client.get(url_for('auth.confirm_account', confirmation_token=token),
+                                               follow_redirects=True)
+                self.assertTrue('testing-accountConfirmation-AMA' in response.get_data(as_text=True))

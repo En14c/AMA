@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% import 'macros/get_flashed_messages.html' as flashed_messages %}
+
+{% block stylesheet %}
+{{ super() }}
+<link rel="stylesheet" href="../../static/unconfirmed_account.css">
+{% endblock %}
+
+{% block page_content %}
+    <div class="container text-center">
+        {{ flashed_messages.get_flashed_info_messages(class='alert alert-info alert-dismissible fade show alert-msg-box-fixed') }}
+        {{ flashed_messages.get_flashed_error_messages(class='alert alert-danger alert-dismissible fade show alert-msg-box-fixed') }}
+        <h1>Hello, {{ user.username }}</h1>
+        <hr>
+        <p>
+            you need to confirm your account to access this site, check your inbox for a confirmation email
+        </p>
+        <p>  
+            <a href="{{ url_for('auth.resend_account_confirmation_email') }}">resend a confirmation email</a>
+        </p>
+    </div>
+{% endblock %}
+
+{% block unit_test %}
+<input type="hidden" value="testing-accountConfirmation-AMA">
+{% endblock %}
