@@ -1,0 +1,5 @@
+hello, {{ user.username }}
+
+click on the following link to confirm this email address
+
+{{ url_for('auth.confirm_new_email_address', confirmation_token=confirmation_token, _external=True) }}

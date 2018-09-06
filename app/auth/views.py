@@ -1,9 +1,10 @@
 from urllib.parse import urlparse
-from flask import url_for, request, redirect, render_template, flash
+from itsdangerous import TimedJSONWebSignatureSerializer, BadSignature, SignatureExpired
+from flask import url_for, request, redirect, render_template, flash, current_app
 from flask_login import current_user, login_user, logout_user, login_required
 from .. import app_login_manager, app_database
 from ..models import User
-from .forms import SignInForm, SignUpForm
+from .forms import SignInForm, SignUpForm, PasswordChangeForm, EmailChangeForm
 from . import auth
 from ..email import send_mail
 
@@ -91,3 +92,44 @@ def unconfirmed_account():
     if current_user.account_confirmed:
         return redirect(url_for('main.home'))
     return render_template('auth/unconfirmed_account.html', user=current_user)
+
+@auth.route('/password_update', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    form = PasswordChangeForm()
+    if form.validate_on_submit():
+        if current_user.check_password(form.current_password.data):
+            current_user.password = form.new_password.data
+            flash('your password have been updated successfully', category='info')
+            return redirect(url_for('main.home'))
+        flash('your current password does not match the one you have entered', category='error')
+    return render_template('auth/change_password.html', form=form)
+
+@auth.route('/change_email', methods=['GET', 'POST'])
+@login_required
+def change_email_address():
+    form = EmailChangeForm()
+    if form.validate_on_submit():
+        serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'], expires_in=300)
+        token_payload = {'new_email': form.new_email.data}
+        token = serializer.dumps(token_payload)
+        send_mail('Email Confirmation', to=form.new_email.data, 
+                  template='email/email_change_confirmation.txt', confirmation_token=token, 
+                  user=current_user)
+        flash('check your inbox, you should have received a confirmation email', category='info')
+        return redirect(url_for('main.home'))
+    return render_template('auth/change_email.html', form=form)
+
+@auth.route('/confirm_new_email/<confirmation_token>')
+@login_required
+def confirm_new_email_address(confirmation_token):
+    serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'])
+    try:
+        token_payload = serializer.loads(confirmation_token)
+    except (BadSignature, SignatureExpired):
+        flash('confirmation link is invalid or has expired, your email address have not been updated', 
+              category='error')
+        return redirect(url_for('main.home'))
+    current_user.email = token_payload['new_email']
+    flash('your email address have been updated successfully', category='info')
+    return redirect(url_for('main.home'))

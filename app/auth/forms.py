@@ -30,4 +30,18 @@ class SignUpForm(FlaskForm):
         
     def validate_email(self, field):
         if User.query.filter_by(email=field.data).first():
-            raise ValidationError(validation_error_msgs['email_used'])                               
+            raise ValidationError(validation_error_msgs['email_used'])
+
+class PasswordChangeForm(FlaskForm):
+    current_password = PasswordField('current_password', validators=[Required()])
+    new_password = PasswordField('new_password', validators=[Required()])
+    submit = SubmitField('submit')
+
+class EmailChangeForm(FlaskForm):
+    current_email = StringField('current_email', validators=[Required(), Length(1, 64)])
+    new_email = StringField('new_email', validators=[Required(), Length(1, 64)])
+    submit = SubmitField('submit')
+
+    def validate_new_email(self, field):
+        if User.query.filter_by(email=field.data).first():
+            raise ValidationError(validation_error_msgs['email_used'])
