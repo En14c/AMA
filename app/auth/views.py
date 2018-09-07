@@ -64,7 +64,7 @@ def signout():
     return redirect(url_for('auth.signin'))
 
 
-@auth.route('/account_confirmation/<confirmation_token>')
+@auth.route('/accountconfirmation/c/c/<confirmation_token>')
 @login_required
 def confirm_account(confirmation_token):
     #user clicks the link more than once
@@ -77,7 +77,7 @@ def confirm_account(confirmation_token):
     return redirect(url_for('main.home'))
 
 
-@auth.route('/account_confirmation/resend_confirmation_email')
+@auth.route('/accountconfirmation/c/r')
 @login_required
 def resend_account_confirmation_email():
     confirmation_token = current_user.create_confirmation_token()
@@ -86,14 +86,14 @@ def resend_account_confirmation_email():
     flash('an account confirmation email has been sent to you', category='info')
     return redirect(url_for('main.home'))
 
-@auth.route('/unconfirmed_account')
+@auth.route('/unconfirmedaccount')
 @login_required
 def unconfirmed_account():
     if current_user.account_confirmed:
         return redirect(url_for('main.home'))
     return render_template('auth/unconfirmed_account.html', user=current_user)
 
-@auth.route('/password_update', methods=['GET', 'POST'])
+@auth.route('/passwordupdate', methods=['GET', 'POST'])
 @login_required
 def change_password():
     form = PasswordChangeForm()
@@ -105,7 +105,7 @@ def change_password():
         flash('your current password does not match the one you have entered', category='error')
     return render_template('auth/change_password.html', form=form)
 
-@auth.route('/change_email', methods=['GET', 'POST'])
+@auth.route('/changeemail', methods=['GET', 'POST'])
 @login_required
 def change_email_address():
     form = EmailChangeForm()
@@ -120,7 +120,7 @@ def change_email_address():
         return redirect(url_for('main.home'))
     return render_template('auth/change_email.html', form=form)
 
-@auth.route('/confirm_new_email/<confirmation_token>')
+@auth.route('/confirmnewemail/<confirmation_token>')
 @login_required
 def confirm_new_email_address(confirmation_token):
     serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'])
