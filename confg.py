@@ -2,6 +2,7 @@ import os
 
 class AppConfig:
     SECRET_KEY = os.environ.get('SECRET_KEY')
+    SERVER_NAME = os.environ.get('SERVER_NAME')
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     MAIL_SERVER = 'smtp.googlemail.com'
@@ -15,6 +16,7 @@ class AppDevelopmentConfig(AppConfig):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URI')
 
 class AppTestingConfig(AppConfig):
+    TESTING = True
     WTF_CSRF_ENABLED = False
     MAIL_IMAP4_SERVER = 'imap.gmail.com'
     MAIL_TEST_SUBJECT = 'AMA-mail-testing'

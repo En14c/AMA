@@ -1,4 +1,4 @@
-hello, {{ user.username }}
+hello, {{ username }}
 
 click on the following link to confirm this email address
 

@@ -5,6 +5,7 @@ from flask_login import current_user, login_user, logout_user, login_required
 from .. import app_login_manager, app_database
 from ..models import User
 from .forms import SignInForm, SignUpForm, PasswordChangeForm, EmailChangeForm
+
 from . import auth
 from ..email import send_mail
 
@@ -49,8 +50,9 @@ def signup():
         app_database.session.add(new_user)
         app_database.session.commit() #new_user object gets assigned an id after a database transaction
         confirmation_token = new_user.create_confirmation_token()
-        send_mail('Account Confirmation', to=new_user.email, template='email/confirmation_mail.txt',
-                  confirmation_token=confirmation_token, user=new_user)
+        send_mail.delay('Account Confirmation', to=new_user.email, 
+                        template='email/confirmation_mail.txt',
+                        confirmation_token=confirmation_token, username=new_user.username)
         flash('you are now registered .. you can login now', category='info')
         return redirect(url_for('auth.signin'))
     return render_template('auth/signup.html', form=signup_form)
@@ -81,8 +83,9 @@ def confirm_account(confirmation_token):
 @login_required
 def resend_account_confirmation_email():
     confirmation_token = current_user.create_confirmation_token()
-    send_mail('Account Confirmation', to=current_user.email, template='email/confirmation_mail.txt',
-              confirmation_token=confirmation_token, user=current_user)
+    send_mail.delay('Account Confirmation', to=current_user.email, 
+                    template='email/confirmation_mail.txt',
+                    confirmation_token=confirmation_token, username=current_user.username)
     flash('an account confirmation email has been sent to you', category='info')
     return redirect(url_for('main.home'))
 
@@ -113,9 +116,10 @@ def change_email_address():
         serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'], expires_in=300)
         token_payload = {'new_email': form.new_email.data}
         token = serializer.dumps(token_payload)
-        send_mail('Email Confirmation', to=form.new_email.data, 
-                  template='email/email_change_confirmation.txt', confirmation_token=token, 
-                  user=current_user)
+        send_mail.delay('Email Confirmation', to=form.new_email.data, 
+                        template='email/email_change_confirmation.txt', 
+                        confirmation_token=token, 
+                        username=current_user.username)
         flash('check your inbox, you should have received a confirmation email', category='info')
         return redirect(url_for('main.home'))
     return render_template('auth/change_email.html', form=form)

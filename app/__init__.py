@@ -3,13 +3,11 @@ from celery import Celery
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_mail import Mail
 from flask_login import LoginManager
 from confg import AppConfig
 
 app_database = SQLAlchemy()
 app_migrate = Migrate(db=app_database)
-app_mail = Mail()
 
 app_login_manager = LoginManager()
 app_login_manager.session_protection = 'strong'
@@ -25,7 +23,6 @@ def create_app(config):
     app_database.init_app(app)
     app_migrate.init_app(app)
     app_login_manager.init_app(app)
-    app_mail.init_app(app)
     
     from .main import main as main_blueprint
     from .auth import auth as auth_blueprint

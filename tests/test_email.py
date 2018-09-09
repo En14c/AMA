@@ -23,7 +23,7 @@ class EmailTestCase(unittest.TestCase):
         mail_subject = self.app.config['MAIL_TEST_SUBJECT'] + \
                             hashlib.md5(str(datetime.utcnow).encode('utf-8')).hexdigest()
         mail_to = os.environ.get('MAIL_SENDER')
-        send_mail(mail_subject, mail_to, self.app.config['MAIL_TEST_TEMPLATE'])
+        send_mail.delay(mail_subject, mail_to, self.app.config['MAIL_TEST_TEMPLATE'], email_testing=1)
 
         #givr some time for the celery worker to finish the ama_send_mail task
         time.sleep(5)
