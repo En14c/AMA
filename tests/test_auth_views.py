@@ -68,9 +68,19 @@ class TestAuthViews(unittest.TestCase):
 
     def test_signup(self):
         """ add user to the database and redirect him to login page """
+        testuser0 = User(username='testuser0')
+        testuser0.password = '123'
+        app_database.session.add(testuser0)
+        app_database.session.commit()
+
         with self.app.test_request_context():
             with self.app.test_client() as app_test_client:
-                ''' get the signup page '''
+                app_test_client.post(url_for('auth.signin'), data={'username':'testuser0',
+                                                                   'password':'123'})
+                response = app_test_client.get(url_for('auth.signup'))
+                self.assertTrue(response.status_code == 302)
+                app_test_client.get(url_for('auth.signout'))
+
                 resposne = app_test_client.get(url_for('auth.signup'))
                 self.assertTrue('testing-signup-AMA' in resposne.get_data(as_text=True))
 

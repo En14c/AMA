@@ -43,6 +43,8 @@ def signin():
 
 @auth.route('/signup', methods=['GET', 'POST'])
 def signup():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.home'))
     signup_form = SignUpForm()
     if signup_form.validate_on_submit():
         new_user = User(username=signup_form.username.data, email=signup_form.email.data,
