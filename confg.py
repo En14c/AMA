@@ -11,6 +11,8 @@ class AppConfig:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_SENDER = os.environ.get('MAIL_SENDER')
+    RECAPTCHA_PUBLIC_KEY = os.environ.get('RECAPTCHA_SITE_KEY')
+    RECAPTCHA_PRIVATE_KEY = os.environ.get('RECAPTCHA_SECRET_KEY')
 
 class AppDevelopmentConfig(AppConfig):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URI')
@@ -21,6 +23,8 @@ class AppTestingConfig(AppConfig):
     MAIL_IMAP4_SERVER = 'imap.gmail.com'
     MAIL_TEST_SUBJECT = 'AMA-mail-testing'
     MAIL_TEST_TEMPLATE = 'email/mail_test.txt'
+    RECAPTCHA_PUBLIC_KEY = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
+    RECAPTCHA_PRIVATE_KEY = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
     SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URI')
 
 class AppProductionConfig(AppConfig):

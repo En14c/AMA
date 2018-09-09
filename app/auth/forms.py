@@ -1,4 +1,4 @@
-from flask_wtf import FlaskForm
+from flask_wtf import FlaskForm, RecaptchaField
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import Required, Length, Regexp, ValidationError
 from app.models import User
@@ -15,6 +15,7 @@ class SignInForm(FlaskForm):
     username = StringField('username', validators=[Required(), Length(1, 32)])
     password = PasswordField('password', validators=[Required()])
     remember_me = BooleanField('remember_me')
+    recaptcha = RecaptchaField()
     submit = SubmitField('submit')
 
 class SignUpForm(FlaskForm):
@@ -22,6 +23,7 @@ class SignUpForm(FlaskForm):
                     Regexp('^[A-Za-z][A-Za-z0-9_.]*$', flags=0, message=validation_error_msgs['username_invalid'])])
     email = StringField('email', validators=[Required(), Length(1, 64)])
     password = PasswordField('password', validators=[Required()])
+    recaptcha = RecaptchaField()
     submit = SubmitField('submit')
 
     def validate_username(self, field):
@@ -35,11 +37,13 @@ class SignUpForm(FlaskForm):
 class PasswordChangeForm(FlaskForm):
     current_password = PasswordField('current_password', validators=[Required()])
     new_password = PasswordField('new_password', validators=[Required()])
+    recaptcha = RecaptchaField()
     submit = SubmitField('submit')
 
 class EmailChangeForm(FlaskForm):
     current_email = StringField('current_email', validators=[Required(), Length(1, 64)])
     new_email = StringField('new_email', validators=[Required(), Length(1, 64)])
+    recaptcha = RecaptchaField()
     submit = SubmitField('submit')
 
     def validate_new_email(self, field):
