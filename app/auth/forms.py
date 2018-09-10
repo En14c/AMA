@@ -7,7 +7,8 @@ validation_error_msgs = {
     'username_invalid' : 'username can be a combination of letters, dots, ' \
                          'numbers or underscores only',
     'username_used' : 'username already used',
-    'email_used' : 'email is already registered'
+    'email_used' : 'email is already registered',
+    'email_not_registered' : 'no user exists with this email address'
 }
 
 
@@ -49,3 +50,23 @@ class EmailChangeForm(FlaskForm):
     def validate_new_email(self, field):
         if User.query.filter_by(email=field.data).first():
             raise ValidationError(validation_error_msgs['email_used'])
+
+
+class PasswordResetInitForm(FlaskForm):
+    recaptcha = RecaptchaField()
+    submit = SubmitField('Reset my password')
+
+
+class PasswordResetRequestForm(FlaskForm):
+    email = StringField('email', validators=[Required()])
+    recaptcha = RecaptchaField()
+    submit = SubmitField('submit')
+
+    def validate_email(self, field):
+        if not User.query.filter_by(email=field.data).first():
+            raise ValidationError(validation_error_msgs['email_not_registered'])
+
+class PasswordResetForm(FlaskForm):
+    password = PasswordField('password', validators=[Required()])
+    recaptcha = RecaptchaField()
+    submit = SubmitField('submit')

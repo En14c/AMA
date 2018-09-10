@@ -1,18 +1,20 @@
+import hashlib, os
 from urllib.parse import urlparse
-from itsdangerous import TimedJSONWebSignatureSerializer, BadSignature, SignatureExpired
-from flask import url_for, request, redirect, render_template, flash, current_app
+from itsdangerous import TimedJSONWebSignatureSerializer, BadSignature
+from werkzeug.exceptions import NotFound
+from flask import url_for, request, redirect, render_template, flash, current_app, session, abort
 from flask_login import current_user, login_user, logout_user, login_required
 from .. import app_login_manager, app_database
 from ..models import User
-from .forms import SignInForm, SignUpForm, PasswordChangeForm, EmailChangeForm
-
+from .forms import SignInForm, SignUpForm, PasswordChangeForm, EmailChangeForm, \
+                    PasswordResetForm, PasswordResetInitForm, PasswordResetRequestForm
 from . import auth
 from ..email import send_mail
 
 
 @app_login_manager.user_loader
-def load_user_object(id):
-    return User.query.get(int(id))
+def load_user_object(user_id):
+    return User.query.get(int(user_id))
 
 
 @auth.before_app_request
@@ -132,10 +134,64 @@ def confirm_new_email_address(confirmation_token):
     serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'])
     try:
         token_payload = serializer.loads(confirmation_token)
-    except (BadSignature, SignatureExpired):
+    except BadSignature:
         flash('confirmation link is invalid or has expired, your email address have not been updated', 
               category='error')
         return redirect(url_for('main.home'))
     current_user.email = token_payload['new_email']
     flash('your email address have been updated successfully', category='info')
     return redirect(url_for('main.home'))
+
+@auth.route('/passwordreset', methods=['GET', 'POST'])
+def password_reset_init():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.home'))
+    form = PasswordResetInitForm()
+    if form.validate_on_submit():
+        serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'], expires_in=300)
+        token_payload = {'password-reset': hashlib.md5(os.urandom(2)).hexdigest()}
+        token = serializer.dumps(token_payload)
+        return redirect(url_for('auth.password_reset_request', token=token))
+    return render_template('auth/password_reset/password_reset_init.html', form=form)
+
+@auth.route('/passwordreset/r/<token>', methods=['GET', 'POST'])
+def password_reset_request(token):
+    validate_request_source = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'])
+    try:
+        validate_request_source.loads(token)
+    except BadSignature:
+        abort(NotFound.code)
+    form = PasswordResetRequestForm()
+    if form.validate_on_submit():
+        serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'], expires_in=300)
+        token_payload = {'email': form.email.data}
+        token = serializer.dumps(token_payload)
+        send_mail.delay('Password Reset Request', to=form.email.data, 
+                        confirmation_token=token,
+                        template='email/password_reset_email.txt')
+        session['password-reset-request'] = hashlib.md5(os.urandom(2)).hexdigest()
+        flash('a password reset link has been sent to your email address', category='info')
+        return redirect(url_for('auth.signin'))
+    return render_template('auth/password_reset/password_reset_request.html', form=form)
+
+@auth.route('/passwordreset/r/u/<confirmation_token>', methods=['GET', 'POST'])
+def password_reset_confirm(confirmation_token):
+    #present 404 error to users who request the url directly not through password reset email
+    if not session.get('password-reset-request'):
+        abort(NotFound.code)
+    serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'])
+    try:
+        user_email = serializer.loads(confirmation_token).get('email')
+    except BadSignature:
+        flash('confirmation link is invalid or has expired', category='error')
+        session.pop('password-reset-request')
+        return redirect(url_for('auth.signin'))
+    form = PasswordResetForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=user_email).first()
+        if user:
+            user.password = form.password.data
+            flash('your password have been updated successfully', category='info')
+        session.pop('password-reset-request')
+        return redirect(url_for('auth.signin'))
+    return render_template('auth/password_reset/password_reset.html', form=form)

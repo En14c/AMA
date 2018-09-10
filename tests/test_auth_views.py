@@ -1,5 +1,5 @@
-import unittest, time
-from itsdangerous import TimedJSONWebSignatureSerializer, BadSignature, SignatureExpired
+import unittest, time, os, hashlib
+from itsdangerous import TimedJSONWebSignatureSerializer
 from flask import url_for
 from app import create_app, app_database
 from app.models import User
@@ -198,3 +198,116 @@ class TestAuthViews(unittest.TestCase):
                 self.assertTrue(response.status_code == 302)
                 self.assertTrue(testuser.email == token_payload['new_email'])
 
+  
+    def test_password_reset_init(self):
+        '''
+        test 3 cases:
+            [1] user is not logged in => requests the [ /passwordreset ] link => display a form
+            [2] user is not logged in a submits the form => continue the password reset process
+            [3] user is logged in => requests the [ /passwordreset ] link => gets redirected to home page
+        '''
+        testuser = User(username='testuser', email=self.app.config['MAIL_SENDER'], 
+                        account_confirmed=True)
+        testuser.password = '123'
+        app_database.session.add(testuser)
+        app_database.session.commit()
+
+        with self.app.test_request_context():
+            with self.app.test_client() as app_test_client:
+                #case [1]
+                response = app_test_client.get(url_for('auth.password_reset_init'))
+                self.assertTrue('testing-password-reset-init-AMA' in response.get_data(as_text=True))
+
+                #case [2]
+                response = app_test_client.post(url_for('auth.password_reset_init'))
+                self.assertTrue(response.status_code == 302)
+
+                #case [3]
+                app_test_client.post(url_for('auth.signin'), data={
+                            'username': 'testuser', 'password': '123'})
+                response = app_test_client.get(url_for('auth.password_reset_init'), follow_redirects=True)
+                self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
+
+    def test_password_reset_request(self):
+        '''
+        test 3 cases:
+            [1] the password reset request link is malformed
+            [2] the password reset request link is valid and user submits the form with registered email address
+            [3] the password reset request link is valid but use submits the form with unregistered email address
+        '''
+        testuser = User(email=self.app.config['MAIL_SENDER'])
+        app_database.session.add(testuser)
+        app_database.session.commit()
+
+        with self.app.test_request_context():
+            with self.app.test_client() as app_test_client:
+                #case [1]
+                serializer = TimedJSONWebSignatureSerializer(str(os.urandom(2)), expires_in=300)
+                token = serializer.dumps(str(os.urandom(2)))
+                response = app_test_client.get(url_for('auth.password_reset_request', token=token))
+                self.assertTrue(response.status_code == 404)
+
+                #case [2]
+                response = app_test_client.post(url_for('auth.password_reset_init'))
+                response = app_test_client.post(response.location, data={'email':testuser.email})
+                self.assertTrue(response.status_code == 302)
+
+                #case [3]
+                response = app_test_client.post(url_for('auth.password_reset_init'))
+                response = app_test_client.post(response.location, data={'email':'test@mail.com'})
+                self.assertTrue('testing-password-reset-request-AMA' in response.get_data(as_text=True))
+
+    def test_password_reset_confirm(self):
+        '''
+        test [4] cases:
+            [1] password reset request didn't come from the password reset request email
+            [2] invalid or malformed password reset confirmation link
+            [3] expired password reset confirmation link
+            [4] valid confirmation link and comes from a password request email => update user password
+        '''
+        testuser = User(email=self.app.config['MAIL_SENDER'])
+        testuser.password = '123'
+        app_database.session.add(testuser)
+        app_database.session.commit()
+
+        with self.app.test_request_context():
+            with self.app.test_client() as app_test_client:
+                #case [1]
+                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], expires_in=300)
+                token_payload = {'email':'test@mail.com'}
+                token = serializer.dumps(token_payload)
+                response = app_test_client.get(url_for('auth.password_reset_confirm', 
+                                                       confirmation_token=token))
+                self.assertTrue(response.status_code == 404)
+
+                #case [2]
+                with app_test_client.session_transaction() as session_trans:
+                    session_trans['password-reset-request'] = hashlib.md5(os.urandom(2)).hexdigest()
+                serializer = TimedJSONWebSignatureSerializer(str(os.urandom(2)), expires_in=300)
+                token_payload = {'email':'test@mail.com'}
+                token = serializer.dumps(token_payload)
+                response = app_test_client.get(url_for('auth.password_reset_confirm', 
+                                                       confirmation_token=token))
+                self.assertTrue(response.status_code == 302)
+
+                #case [3]
+                with app_test_client.session_transaction() as session_trans:
+                    session_trans['password-reset-request'] = hashlib.md5(os.urandom(2)).hexdigest()
+                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], expires_in=0)
+                token_payload = {'email':'test@mail.com'}
+                token = serializer.dumps(token_payload)
+                time.sleep(5)
+                response = app_test_client.get(url_for('auth.password_reset_confirm', 
+                                                       confirmation_token=token))
+                self.assertTrue(response.status_code == 302)                
+                
+                #case [4]
+                with app_test_client.session_transaction() as session_trans:
+                    session_trans['password-reset-request'] = hashlib.md5(os.urandom(2)).hexdigest()
+                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], expires_in=300)
+                token_payload = {'email':testuser.email}
+                token = serializer.dumps(token_payload)
+                app_test_client.post(url_for('auth.password_reset_confirm',
+                                             confirmation_token=token), data={'password':'1234'})
+                self.assertTrue(testuser.check_password('1234'))
+                
