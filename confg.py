@@ -1,5 +1,12 @@
 import os
 
+class TokenExpirationTime:
+    AFTER_0_MIN = 0
+    AFTER_5_MIN = 300
+    AFTER_10_MIN = 600
+    AFTER_15_MIN = 900
+    AFTER_1_HOUR = 3600
+
 class AppConfig:
     SECRET_KEY = os.environ.get('SECRET_KEY')
     SERVER_NAME = os.environ.get('SERVER_NAME')

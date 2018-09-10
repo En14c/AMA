@@ -4,6 +4,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer, BadSignature
 from werkzeug.exceptions import NotFound
 from flask import url_for, request, redirect, render_template, flash, current_app, session, abort
 from flask_login import current_user, login_user, logout_user, login_required
+from confg import TokenExpirationTime
 from .. import app_login_manager, app_database
 from ..models import User
 from .forms import SignInForm, SignUpForm, PasswordChangeForm, EmailChangeForm, \
@@ -117,7 +118,8 @@ def change_password():
 def change_email_address():
     form = EmailChangeForm()
     if form.validate_on_submit():
-        serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'], expires_in=300)
+        serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'], 
+                                                     expires_in=TokenExpirationTime.AFTER_5_MIN)
         token_payload = {'new_email': form.new_email.data}
         token = serializer.dumps(token_payload)
         send_mail.delay('Email Confirmation', to=form.new_email.data, 
@@ -148,7 +150,8 @@ def password_reset_init():
         return redirect(url_for('main.home'))
     form = PasswordResetInitForm()
     if form.validate_on_submit():
-        serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'], expires_in=300)
+        serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'], 
+                                                     expires_in=TokenExpirationTime.AFTER_5_MIN)
         token_payload = {'password-reset': hashlib.md5(os.urandom(2)).hexdigest()}
         token = serializer.dumps(token_payload)
         return redirect(url_for('auth.password_reset_request', token=token))
@@ -163,7 +166,8 @@ def password_reset_request(token):
         abort(NotFound.code)
     form = PasswordResetRequestForm()
     if form.validate_on_submit():
-        serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'], expires_in=300)
+        serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'], 
+                                                     expires_in=TokenExpirationTime.AFTER_5_MIN)
         token_payload = {'email': form.email.data}
         token = serializer.dumps(token_payload)
         send_mail.delay('Password Reset Request', to=form.email.data, 

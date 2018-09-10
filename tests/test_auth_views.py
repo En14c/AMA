@@ -3,7 +3,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer
 from flask import url_for
 from app import create_app, app_database
 from app.models import User
-from confg import app_config
+from confg import app_config, TokenExpirationTime
 
 
 class TestAuthViews(unittest.TestCase):
@@ -113,21 +113,21 @@ class TestAuthViews(unittest.TestCase):
                                                                    'password': '123'})
                 
                 #case [1]
-                token = testuser.create_confirmation_token(exp=0)
+                token = testuser.create_confirmation_token(exp=TokenExpirationTime.AFTER_0_MIN)
                 response = app_test_client.get(url_for('auth.confirm_account', confirmation_token=token), 
                                                follow_redirects=True)
                 self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
 
                 #case [2]
                 testuser.account_confirmed = False
-                token = testuser.create_confirmation_token(exp=180)
+                token = testuser.create_confirmation_token(exp=TokenExpirationTime.AFTER_5_MIN)
                 response = app_test_client.get(url_for('auth.confirm_account', confirmation_token=token), 
                                                follow_redirects=True)
                 self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
 
                 #case [3]
                 testuser.account_confirmed = False
-                token = testuser.create_confirmation_token(exp=0)
+                token = testuser.create_confirmation_token(exp=TokenExpirationTime.AFTER_0_MIN)
                 time.sleep(2)
                 response = app_test_client.get(url_for('auth.confirm_account', confirmation_token=token),
                                                follow_redirects=True)
@@ -182,7 +182,8 @@ class TestAuthViews(unittest.TestCase):
                                                                    'password': '123'})
 
                 #case [1]
-                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], expires_in=0)
+                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], 
+                                                             expires_in=TokenExpirationTime.AFTER_0_MIN)
                 token = serializer.dumps(token_payload)
                 time.sleep(2)
                 response = app_test_client.get(url_for('auth.confirm_new_email_address', 
@@ -191,7 +192,8 @@ class TestAuthViews(unittest.TestCase):
                 self.assertFalse(testuser.email == token_payload['new_email'])
 
                 #case [2]
-                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], expires_in=300)
+                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], 
+                                                             expires_in=TokenExpirationTime.AFTER_5_MIN)
                 token = serializer.dumps(token_payload)
                 response = app_test_client.get(url_for('auth.confirm_new_email_address',
                                                                 confirmation_token=token))
@@ -242,7 +244,8 @@ class TestAuthViews(unittest.TestCase):
         with self.app.test_request_context():
             with self.app.test_client() as app_test_client:
                 #case [1]
-                serializer = TimedJSONWebSignatureSerializer(str(os.urandom(2)), expires_in=300)
+                serializer = TimedJSONWebSignatureSerializer(str(os.urandom(2)), 
+                                                             expires_in=TokenExpirationTime.AFTER_5_MIN)
                 token = serializer.dumps(str(os.urandom(2)))
                 response = app_test_client.get(url_for('auth.password_reset_request', token=token))
                 self.assertTrue(response.status_code == 404)
@@ -273,7 +276,8 @@ class TestAuthViews(unittest.TestCase):
         with self.app.test_request_context():
             with self.app.test_client() as app_test_client:
                 #case [1]
-                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], expires_in=300)
+                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], 
+                                                             expires_in=TokenExpirationTime.AFTER_5_MIN)
                 token_payload = {'email':'test@mail.com'}
                 token = serializer.dumps(token_payload)
                 response = app_test_client.get(url_for('auth.password_reset_confirm', 
@@ -283,7 +287,8 @@ class TestAuthViews(unittest.TestCase):
                 #case [2]
                 with app_test_client.session_transaction() as session_trans:
                     session_trans['password-reset-request'] = hashlib.md5(os.urandom(2)).hexdigest()
-                serializer = TimedJSONWebSignatureSerializer(str(os.urandom(2)), expires_in=300)
+                serializer = TimedJSONWebSignatureSerializer(str(os.urandom(2)), 
+                                                             expires_in=TokenExpirationTime.AFTER_5_MIN)
                 token_payload = {'email':'test@mail.com'}
                 token = serializer.dumps(token_payload)
                 response = app_test_client.get(url_for('auth.password_reset_confirm', 
@@ -293,7 +298,8 @@ class TestAuthViews(unittest.TestCase):
                 #case [3]
                 with app_test_client.session_transaction() as session_trans:
                     session_trans['password-reset-request'] = hashlib.md5(os.urandom(2)).hexdigest()
-                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], expires_in=0)
+                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], 
+                                                             expires_in=TokenExpirationTime.AFTER_0_MIN)
                 token_payload = {'email':'test@mail.com'}
                 token = serializer.dumps(token_payload)
                 time.sleep(5)
@@ -304,7 +310,8 @@ class TestAuthViews(unittest.TestCase):
                 #case [4]
                 with app_test_client.session_transaction() as session_trans:
                     session_trans['password-reset-request'] = hashlib.md5(os.urandom(2)).hexdigest()
-                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], expires_in=300)
+                serializer = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'], 
+                                                             expires_in=TokenExpirationTime.AFTER_5_MIN)
                 token_payload = {'email':testuser.email}
                 token = serializer.dumps(token_payload)
                 app_test_client.post(url_for('auth.password_reset_confirm',

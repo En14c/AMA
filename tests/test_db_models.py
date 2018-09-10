@@ -1,7 +1,7 @@
 import unittest, time
 from app import create_app, app_database
 from app.models import User
-from confg import app_config
+from confg import app_config, TokenExpirationTime
 
 class TestUserModel(unittest.TestCase):
     def setUp(self):
@@ -52,7 +52,7 @@ class TestUserModel(unittest.TestCase):
         self.assertFalse(testuser1.verify_confirmation_token(token))
 
         #test expired confirmation token
-        token = testuser1.create_confirmation_token(exp=0)
+        token = testuser1.create_confirmation_token(exp=TokenExpirationTime.AFTER_0_MIN)
         time.sleep(1)
         self.assertFalse(testuser1.verify_confirmation_token(token))
                 
