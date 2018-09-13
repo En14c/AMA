@@ -1,7 +1,29 @@
 import unittest, time
 from app import create_app, app_database
-from app.models import User
+from app.models import User, Role
 from confg import app_config, TokenExpirationTime
+
+class TestRoleModel(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app(app_config['testing'])
+        self.app_ctx = self.app.app_context()
+        self.app_ctx.push()
+        app_database.create_all()
+
+    def tearDown(self):
+        app_database.session.remove()
+        app_database.drop_all()
+        self.app_ctx.pop()
+
+    def test_populate_roles_table(self):
+        Role.populate_table()
+
+        user_role = Role.query.filter(Role.role_name == 'user').first()
+        admin_role = Role.query.filter(Role.role_name == 'admin').first()
+
+        self.assertIsNotNone(user_role)
+        self.assertIsNotNone(admin_role)
+
 
 class TestUserModel(unittest.TestCase):
     def setUp(self):
@@ -55,4 +77,17 @@ class TestUserModel(unittest.TestCase):
         token = testuser1.create_confirmation_token(exp=TokenExpirationTime.AFTER_0_MIN)
         time.sleep(1)
         self.assertFalse(testuser1.verify_confirmation_token(token))
-                
+
+    def test_user_roles_permissions(self):
+        Role.populate_table()
+        user_role = Role.query.filter(Role.role_name == 'user').first()
+        admin_role = Role.query.filter(Role.role_name == 'admin').first()
+        
+        user = User(role=user_role)
+        admin = User(role=admin_role)
+        
+        self.assertTrue(user.has_permissions(Role.roles['user']))
+        self.assertFalse(user.is_admin())
+
+        self.assertTrue(admin.has_permissions(Role.roles['admin']))
+        self.assertTrue(admin.is_admin())

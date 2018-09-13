@@ -6,7 +6,7 @@ from flask import url_for, request, redirect, render_template, flash, current_ap
 from flask_login import current_user, login_user, logout_user, login_required
 from confg import TokenExpirationTime
 from .. import app_login_manager, app_database
-from ..models import User
+from ..models import User, Role
 from .forms import SignInForm, SignUpForm, PasswordChangeForm, EmailChangeForm, \
                     PasswordResetForm, PasswordResetInitForm, PasswordResetRequestForm
 from . import auth
@@ -50,8 +50,12 @@ def signup():
         return redirect(url_for('main.home'))
     signup_form = SignUpForm()
     if signup_form.validate_on_submit():
+        if signup_form.email.data in current_app.config['ADMIN_MAIL_LIST']:
+            role = Role.query.filter(Role.role_name == 'admin').first()
+        else:
+            role = Role.query.filter(Role.role_name == 'user').first()
         new_user = User(username=signup_form.username.data, email=signup_form.email.data,
-                        password=signup_form.password.data)
+                        password=signup_form.password.data, role=role)
         app_database.session.add(new_user)
         app_database.session.commit() #new_user object gets assigned an id after a database transaction
         confirmation_token = new_user.create_confirmation_token()

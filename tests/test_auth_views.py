@@ -2,7 +2,7 @@ import unittest, time, os, hashlib
 from itsdangerous import TimedJSONWebSignatureSerializer
 from flask import url_for
 from app import create_app, app_database
-from app.models import User
+from app.models import User, Role
 from confg import app_config, TokenExpirationTime
 
 
@@ -68,6 +68,7 @@ class TestAuthViews(unittest.TestCase):
 
     def test_signup(self):
         """ add user to the database and redirect him to login page """
+        Role.populate_table()
         testuser0 = User(username='testuser0')
         testuser0.password = '123'
         app_database.session.add(testuser0)
@@ -85,13 +86,26 @@ class TestAuthViews(unittest.TestCase):
                 self.assertTrue('testing-signup-AMA' in resposne.get_data(as_text=True))
 
                 resposne = app_test_client.post(url_for('auth.signup'), data={
-                        'username': 'testuser', 'password': '123', 'email': 'testuser@mail.com'},
-                        follow_redirects=True)
+                    'username': 'testuser', 'password': '123', 'email': 'testuser@mail.com'},
+                    follow_redirects=True)
                 self.assertTrue('testing-signin-AMA' in resposne.get_data(as_text=True))
 
-                ''' user added to the database ?'''
-                test_user = User.query.get(1)
+                response = app_test_client.post(url_for('auth.signup'), data={
+                    'username': 'testuser1', 'password': '123', 
+                    'email': self.app.config['ADMIN_MAIL_LIST'][0]}, follow_redirects=True)
+                self.assertTrue('testing-signin-AMA' in response.get_data(as_text=True))
+
+                ''' testuser added to the database with user permissions ? '''
+                test_user = User.query.filter_by(username='testuser').first()
                 self.assertIsNotNone(test_user)
+                self.assertEqual(test_user.role.role_name, 'user')
+
+                '''testuser1 added to the database with admin permissions '''
+                admin_user = User.query.filter_by(username='testuser1').first()
+                self.assertIsNotNone(admin_user)
+                self.assertEqual(admin_user.role.role_name, 'admin')
+
+
 
     def test_confirm_account(self):
         '''

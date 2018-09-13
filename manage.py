@@ -1,7 +1,7 @@
 import os
 import unittest
 from app import create_app, app_database
-from app.models import User
+from app.models import User, Role, AppPermissions
 from confg import app_config
 
 
@@ -16,6 +16,6 @@ def app_test():
 
 @app.shell_context_processor
 def create_shell_context():
-    return dict(app=app, db=app_database, User=User)
+    return dict(app=app, db=app_database, User=User, Role=Role, AppPermissions=AppPermissions)
 
 

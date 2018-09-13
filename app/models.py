@@ -5,11 +5,45 @@ from itsdangerous import TimedJSONWebSignatureSerializer, BadSignature, Signatur
 from confg import TokenExpirationTime
 from . import app_database
 
+class AppPermissions:
+    ASK = 0x1
+    FOLLOW_OTHERS = 0x2
+    ADMINISTER = 0x4
+
+class Role(app_database.Model):
+    __tablename__ = 'user_roles'
+
+    id = app_database.Column(app_database.Integer, primary_key=True)
+    role_name = app_database.Column(app_database.String(32), unique=True)
+    permissions = app_database.Column(app_database.Integer)
+    users = app_database.relationship('User', backref=app_database.backref('role', lazy='joined'),
+                                      lazy='dynamic')
+
+    roles = {
+        'user': AppPermissions.ASK | \
+                AppPermissions.FOLLOW_OTHERS,
+        'admin': AppPermissions.ASK | \
+                 AppPermissions.FOLLOW_OTHERS | \
+                 AppPermissions.ADMINISTER
+    }
+
+    @staticmethod
+    def populate_table():
+        """add/update roles to/in the user_roles table"""
+        for role in Role.roles:
+            role_ = Role.query.filter(Role.role_name == role).first()
+            if not role_:
+                role_ = Role(role_name=role)
+            role_.permissions = Role.roles[role]
+            app_database.session.add(role_)
+            app_database.session.commit()
+
 
 class User(UserMixin, app_database.Model):
     __tablename__ = "users"
     
     id = app_database.Column(app_database.Integer, primary_key=True)
+    role_id = app_database.Column(app_database.Integer, app_database.ForeignKey('user_roles.id'))
     username = app_database.Column(app_database.String(32), unique=True)
     email = app_database.Column(app_database.String(64), unique=True)
     password_hash = app_database.Column(app_database.String(128))
@@ -44,3 +78,10 @@ class User(UserMixin, app_database.Model):
         self.account_confirmed = True
         app_database.session.add(self)
         return True
+
+    def has_permissions(self, permissions):
+        return self.role is not None and \
+                        self.role.permissions & permissions == permissions
+    
+    def is_admin(self):
+        return self.has_permissions(AppPermissions.ADMINISTER)
