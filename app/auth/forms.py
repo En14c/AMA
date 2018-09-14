@@ -8,6 +8,7 @@ validation_error_msgs = {
                          'numbers or underscores only',
     'username_used' : 'username already used',
     'email_used' : 'email is already registered',
+    'email_invalid' : 'make sure you supplied your registered email address',
     'email_not_registered' : 'no user exists with this email address'
 }
 
@@ -50,6 +51,10 @@ class EmailChangeForm(FlaskForm):
     def validate_new_email(self, field):
         if User.query.filter_by(email=field.data).first():
             raise ValidationError(validation_error_msgs['email_used'])
+
+    def validate_current_email(self, field):
+        if not User.query.filter_by(email=field.data).first():
+            raise ValidationError(validation_error_msgs['email_invalid'])
 
 
 class PasswordResetInitForm(FlaskForm):

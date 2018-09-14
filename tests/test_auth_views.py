@@ -175,8 +175,46 @@ class TestAuthViews(unittest.TestCase):
                     'current_password': '123', 'new_password': '1234'}, follow_redirects=True)
                 self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
                 self.assertTrue(testuser.check_password('1234'))
+
+    def test_change_email_address(self):
+        """
+        test 2 cases:
+            [1] user supplied email address not assoicated with his account as his current email address
+            [2] user supplied new email address that is associated with another user's account
+            [3] user supplied a valid current && new email addresses
+        """
+        testuser = User(username='testuser', email='test@mail.com', account_confirmed=True)
+        testuser2 = User(username='testuser2', email='test2@mail.com')
+        testuser.password = '123'
+        app_database.session.add_all([testuser, testuser2])
+        app_database.session.commit()
+
+        with self.app.test_request_context():
+            with self.app.test_client() as app_test_client:
+                app_test_client.post(url_for('auth.signin'), data={'username': 'testuser',
+                                                                   'password': '123'})
+
+                response = app_test_client.get(url_for('auth.change_email_address'))
+                self.assertTrue('testing-change-email-AMA' in response.get_data(as_text=True))
+
+                #case [1]
+                response = app_test_client.post(url_for('auth.change_email_address'), data={
+                    'current_email': 'invalid@mail.com', 
+                    'new_email': self.app.config['MAIL_SENDER']})
+                self.assertTrue('testing-change-email-AMA' in response.get_data(as_text=True))
+
+                #case [2]
+                response = app_test_client.post(url_for('auth.change_email_address'), data={
+                    'current_email': testuser.email, 'new_email': testuser2.email})
+                self.assertTrue('testing-change-email-AMA' in response.get_data(as_text=True))
+
+                #case [3]
+                response = app_test_client.post(url_for('auth.change_email_address'), data={
+                    'current_email': testuser.email,
+                    'new_email': self.app.config['MAIL_SENDER']})
+                self.assertTrue(response.status_code == 302)
             
-    def test_confirm_email_address(self):
+    def test_confirm_new_email_address(self):
         """
         test 2 cases:
             [1] email address confirmation expired or invalid

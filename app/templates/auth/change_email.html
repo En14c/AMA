@@ -16,6 +16,13 @@
         {{ form.csrf_token }}
         <div class="row">
             {{ form.current_email(class='form-control offset-md-4 col-md-4', type='email', placeholder='current email address') }}
+            <div class="col-md-4 text-left">
+                <span style="color: #ff0000; font-size: 18px">
+                {% for error in form.current_email.errors %}
+                    {{ error }}
+                {% endfor %}
+                </span>
+            </div>
         </div>
         <div class="row">
             {{ form.new_email(class='form-control offset-md-4 col-md-4', type='email', placeholder='new email address') }}
