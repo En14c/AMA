@@ -48,14 +48,17 @@ class EmailChangeForm(FlaskForm):
     recaptcha = RecaptchaField()
     submit = SubmitField('submit')
 
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
     def validate_new_email(self, field):
         if User.query.filter_by(email=field.data).first():
             raise ValidationError(validation_error_msgs['email_used'])
 
     def validate_current_email(self, field):
-        if not User.query.filter_by(email=field.data).first():
+        if self.user.email != field.data:
             raise ValidationError(validation_error_msgs['email_invalid'])
-
 
 class PasswordResetInitForm(FlaskForm):
     recaptcha = RecaptchaField()

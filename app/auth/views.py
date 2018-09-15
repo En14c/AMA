@@ -120,7 +120,7 @@ def change_password():
 @auth.route('/changeemail', methods=['GET', 'POST'])
 @login_required
 def change_email_address():
-    form = EmailChangeForm()
+    form = EmailChangeForm(current_user)
     if form.validate_on_submit():
         serializer = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'], 
                                                      expires_in=TokenExpirationTime.AFTER_5_MIN)
