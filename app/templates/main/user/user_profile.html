@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+
+{% block title %}
+&#123; AMA &#125; - {{ user.username }} Profile
+{% endblock %}
+
+{% block stylesheet %}
+{{ super() }}
+<link rel="stylesheet" href="/static/home.css">
+{% endblock %}
+
+
+{% block page_content %}    
+    {{ super() }}
+
+    <div class="container page-content">
+        <div class="text-center" style="width:100%; padding-top:15px;">
+            <img src="{{ user.generate_gravatar_uri(200) }}" class="rounded-circle mx-auto d-block img-thumbnail">
+            <h3 style="margin-top:5px;">{{ user.username }}</h3>
+        </div>
+        <hr style="margin-top:15px; width:90%;">
+        <div class="text-center" style="padding: 5px 60px;">
+        {{ user.about_me }}
+        </div>
+    </div>
+{% endblock %}
+
+{% block unit_test %}
+<input type="hidden" value="testing-user-profile-AMA">
+{% endblock %}

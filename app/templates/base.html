@@ -34,17 +34,24 @@
                     <li class="nav-item active">
                         <a class="nav-link" href="{{ url_for('main.home') }}">Home</a>
                     </li>
+                    {% if current_user.is_admin() %}
                     <li class="nav-item active">
-                        <a class="nav-link" href="#">Profile</a>
+                        <a class="nav-link" href="{{ url_for('main.accounts_control') }}">Accounts Control</a>
                     </li>
-                    <li class="nav-item active">
-                        <a class="nav-link" href="{{ url_for('auth.signout')}}">Logout</a>
+                    {% endif %}
+                    <li class="nav-item dropdown active">
+                        <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Profile</a>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item" href="{{ url_for('main.user_profile', username=current_user.username) }}">Show Profile</a>
+                            <a class="dropdown-item" href="{{ url_for('main.user_profile_edit', username=current_user.username) }}">Edit Profile</a>
+                        </div>
                     </li>
                     <li class="nav-item dropdown active">
-                        <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Account Management</a>
+                        <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Account</a>
                         <div class="dropdown-menu">
                             <a class="dropdown-item" href="{{ url_for('auth.change_password') }}">Change Password</a>
                             <a class="dropdown-item" href="{{ url_for('auth.change_email_address') }}">Change Email</a>
+                            <a class="dropdown-item" href="{{ url_for('auth.signout') }}">Logout</a>
                         </div>
                     </li>
                 </ul>
