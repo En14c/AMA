@@ -31,11 +31,11 @@ def user_profile(username):
 def user_profile_edit(username):
     if current_user.username != username:
         abort(NotFound.code)
-    form = UserProfileEditForm(current_user)
+    form = UserProfileEditForm(current_user._get_current_object())
     if form.validate_on_submit():
         current_user.username = form.username.data
         current_user.about_me = form.about_me.data
-        app_database.session.add(current_user)
+        app_database.session.add(current_user._get_current_object())
         return redirect(url_for('main.user_profile', username=current_user.username))
     form.username.data = current_user.username
     form.about_me.data = current_user.about_me
