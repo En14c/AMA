@@ -144,7 +144,7 @@ def confirm_new_email_address(confirmation_token):
         flash('confirmation link is invalid or has expired, your email address have not been updated', 
               category='error')
         return redirect(url_for('main.home'))
-    current_user.email = token_payload['new_email']
+    current_user.change_email(token_payload['new_email'])
     flash('your email address have been updated successfully', category='info')
     return redirect(url_for('main.home'))
 

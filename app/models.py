@@ -1,3 +1,4 @@
+import hashlib
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from flask import current_app
@@ -48,6 +49,8 @@ class User(UserMixin, app_database.Model):
     email = app_database.Column(app_database.String(64), unique=True)
     password_hash = app_database.Column(app_database.String(128))
     account_confirmed = app_database.Column(app_database.Boolean, default=False)
+    about_me = app_database.Column(app_database.String(300))
+    avatar_hash = app_database.Column(app_database.String(32))
 
     @property
     def password(self):
@@ -85,3 +88,17 @@ class User(UserMixin, app_database.Model):
     
     def is_admin(self):
         return self.has_permissions(AppPermissions.ADMINISTER)
+
+    def change_email(self, new_email):
+        self.email = new_email
+        self.avatar_hash = hashlib.md5(self.email.encode('utf-8')).hexdigest()
+        app_database.session.add(self)
+
+    def generate_gravatar_uri(self, size=100, default='identicon'):
+        if not self.avatar_hash:
+            self.avatar_hash = hashlib.md5(self.email.encode('utf-8')).hexdigest()
+        avatar_uri = 'http://www.gravatar.com/avatar'
+        return '{avatar_uri}/{hash}?s={size}&d={default}'.format(avatar_uri=avatar_uri,
+                                                                 hash=self.avatar_hash,
+                                                                 size=size,
+                                                                 default=default)
