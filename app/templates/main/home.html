@@ -23,5 +23,7 @@
 
 
 {% block unit_test %}
-    <input type="hidden" value="testing-home-AMA">
+{% if config['TESTING'] %}
+<input type="hidden" value="testing-home-AMA">
+{% endif %}
 {% endblock %}

@@ -15,6 +15,9 @@
     </div>
 {% endblock %}
 
+
 {% block unit_test %}
+{% if config['TESTING'] %}
 <input type="hidden" value="testing-500-error-AMA">
+{% endif %}
 {% endblock %}

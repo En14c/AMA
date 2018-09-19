@@ -16,5 +16,7 @@
 {% endblock %}
 
 {% block unit_test %}
+{% if config['TESTING'] %}
 <input type="hidden" value="testing-404-error-AMA">
+{% endif %}
 {% endblock %}

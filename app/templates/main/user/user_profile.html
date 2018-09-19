@@ -26,6 +26,9 @@
     </div>
 {% endblock %}
 
+
 {% block unit_test %}
+{% if config['TESTING'] %}
 <input type="hidden" value="testing-user-profile-AMA">
+{% endif %}
 {% endblock %}

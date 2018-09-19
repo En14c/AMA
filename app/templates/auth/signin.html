@@ -50,5 +50,7 @@
 {% endblock %}
 
 {% block unit_test %}
+{% if config['TESTING'] %}
 <input type="hidden" value="testing-signin-AMA">
+{% endif %}
 {% endblock %}
