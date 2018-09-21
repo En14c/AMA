@@ -1,4 +1,5 @@
-import hashlib
+import hashlib, random
+from faker import Faker
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from flask import current_app
@@ -78,6 +79,54 @@ class User(UserMixin, app_database.Model):
                                               foreign_keys=[Question.asker_id],
                                               backref=app_database.backref('asker', lazy='joined'),
                                               lazy='dynamic')
+    fake_user_questions_count = 20
+    fake_user_answers_count = fake_user_questions_count - 2
+
+    @staticmethod
+    def generate_fake_users(count=100, confirm_accounts=True, user_role='user'):
+        fake = Faker()
+        role = Role.query.filter(Role.role_name == user_role).first()
+        if not role:
+            return print('[Error] unable to get user role')
+        for i in range(0, count):
+            user = User(username=fake.user_name(), email=fake.safe_email(),
+                        about_me=fake.sentence(nb_words=50, variable_nb_words=True, 
+                                               ext_word_list=None), role=role,
+                        account_confirmed=confirm_accounts)
+            user.password = fake.password(length=4, special_chars=True, digits=True, 
+                                          upper_case=True, lower_case=True)
+            app_database.session.add(user)
+        app_database.session.commit()
+        
+    @staticmethod
+    def generate_fake_questions(username, count=fake_user_questions_count):
+        fake = Faker()
+        user = User.query.filter(User.username == username).first()
+        if not user:
+            return print('[Error] no user exist with the username provided')
+        for i in range(0, count):
+            fake_user = User.query.offset(random.randint(0, User.query.count() - 1)).first()
+            fake_user.ask_question(question_content=fake.sentence(nb_words=10, 
+                                                                  variable_nb_words=True, 
+                                                                  ext_word_list=None),
+                                   question_recipient=user)
+        app_database.session.commit()
+
+    @staticmethod
+    def generate_fake_answers(username, count=fake_user_answers_count):
+        fake = Faker()
+        user = User.query.filter(User.username == username).first()
+        if not user:
+            return print('[Error] no user exist with the username provided')
+        questions = Question.query.filter(Question.replier_id == user.id)
+        for i in range(0, count):
+            question = questions.offset(random.randint(0, questions.count() - 1)).first()
+            if not question.answer:
+                user.answer_question(answer_content=fake.sentence(nb_words=10, 
+                                                                  variable_nb_words=True, 
+                                                                  ext_word_list=None),
+                                     question=question)
+        app_database.session.commit()
 
     @property
     def password(self):
@@ -140,14 +189,14 @@ class User(UserMixin, app_database.Model):
 
     def get_unanswered_questions(self):
         unanswered_questions = []
-        for question in Question.query.all():
+        for question in Question.query.filter(Question.replier_id == self.id).all():
             if not question.answer:
                 unanswered_questions.append(question)
         return unanswered_questions
 
     def get_answered_questions(self):
         answered_questions = []
-        for question in Question.query.all():
+        for question in Question.query.filter(Question.replier_id == self.id).all():
             if question.answer:
                 answered_questions.append(question)
         return answered_questions
