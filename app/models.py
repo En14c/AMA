@@ -1,4 +1,4 @@
-import hashlib, random
+import hashlib, random, datetime
 from faker import Faker
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
@@ -46,6 +46,7 @@ class Question(app_database.Model):
 
     id = app_database.Column(app_database.Integer, primary_key=True)
     question_content = app_database.Column(app_database.String(500))
+    timestamp = app_database.Column(app_database.DateTime, default=datetime.datetime.utcnow)
     asker_id = app_database.Column(app_database.Integer, app_database.ForeignKey('users.id'))
     replier_id = app_database.Column(app_database.Integer, app_database.ForeignKey('users.id'))
     answer = app_database.relationship('Answer',
@@ -189,14 +190,20 @@ class User(UserMixin, app_database.Model):
 
     def get_unanswered_questions(self):
         unanswered_questions = []
-        for question in Question.query.filter(Question.replier_id == self.id).all():
+        for question in (Question
+                         .query
+                         .filter(Question.replier_id == self.id)
+                         .order_by(Question.timestamp.desc()).all()):
             if not question.answer:
                 unanswered_questions.append(question)
         return unanswered_questions
 
     def get_answered_questions(self):
         answered_questions = []
-        for question in Question.query.filter(Question.replier_id == self.id).all():
+        for question in (Question
+                         .query
+                         .filter(Question.replier_id == self.id)
+                         .order_by(Question.timestamp.desc()).all()):
             if question.answer:
                 answered_questions.append(question)
         return answered_questions
