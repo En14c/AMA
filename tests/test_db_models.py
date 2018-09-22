@@ -1,6 +1,7 @@
 import unittest, time
+from faker import Faker
 from app import create_app, app_database
-from app.models import User, Role, Question, Answer
+from app.models import User, Role, Question, Answer, Follow
 from confg import app_config, TokenExpirationTime
 
 class TestRoleModel(unittest.TestCase):
@@ -61,6 +62,41 @@ class TestQuestionAnswerModels(unittest.TestCase):
 
         self.assertIs(ans1.question, q1)
         self.assertIs(ans2.question, q2)
+
+class TestFollowModel(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app(app_config['testing'])
+        self.app_ctx = self.app.app_context()
+        self.app_ctx.push()
+        app_database.create_all()
+
+    def tearDown(self):
+        app_database.session.remove()
+        app_database.drop_all()
+        self.app_ctx.pop()
+
+    def test_follow_model(self):
+        fake = Faker()
+        user1 = User(username=fake.user_name())
+        user2 = User(username=fake.user_name())
+
+        app_database.session.add_all([user1, user2])
+        app_database.session.commit()
+
+        follow1 = Follow(follower=user1, followed=user2)
+        app_database.session.add(follow1)
+        app_database.session.commit()
+
+        self.assertEqual(user1.follows.count(), 1)
+        self.assertEqual(user2.followed_by.count(), 1)
+
+        self.assertEqual(user1.follows.first().followed.username, user2.username)
+        self.assertEqual(user2.followed_by.first().follower.username, user1.username)
+
+        app_database.session.delete(user1)
+        app_database.session.commit()
+
+        self.assertIsNone(Follow.query.get(1))
 
 class TestUserModel(unittest.TestCase):
     def setUp(self):
@@ -173,3 +209,69 @@ class TestUserModel(unittest.TestCase):
 
         unanswered_questions = u2.get_unanswered_questions()
         self.assertEqual(len(unanswered_questions), 1)
+
+    def test_get_followers_followed_list(self):
+        fake = Faker()
+        user1 = User(username=fake.user_name())
+        user2 = User(username=fake.user_name())
+
+        app_database.session.add_all([user1, user2])
+        app_database.session.commit()
+
+        follow1 = Follow(follower=user1, followed=user2)
+        app_database.session.add(follow1)
+        app_database.session.commit()
+
+        followers_list = user2.get_followers_list()
+        self.assertEqual(len(followers_list), 1)
+        self.assertEqual(followers_list[0].username, user1.username)
+
+        followed_list = user1.get_followed_users_list()
+        self.assertEqual(len(followed_list), 1)
+        self.assertEqual(followed_list[0].username, user2.username)
+
+    def test_is_following_followed_by(self):
+        fake = Faker()
+        user1 = User(username=fake.user_name())
+        user2 = User(username=fake.user_name())
+
+        app_database.session.add_all([user1, user2])
+        app_database.session.commit()
+
+        follow1 = Follow(follower=user1, followed=user2)
+        app_database.session.add(follow1)
+        app_database.session.commit()
+
+        self.assertTrue(user2.is_followed_by(user1))
+        self.assertTrue(user1.is_following(user2))
+
+        self.assertFalse(user2.is_followed_by(user2))
+        self.assertFalse(user1.is_following(user1))
+
+    def test_follow_unfollow(self):
+        fake = Faker()
+        user1 = User(username=fake.user_name())
+        user2 = User(username=fake.user_name())
+
+        app_database.session.add_all([user1, user2])
+        app_database.session.commit()
+
+        user1.follow(user2)
+        user1.follow(user1)
+        app_database.session.commit()
+
+        #user can not follow himself
+        self.assertEqual(user1.follows.count(), 1)
+
+        self.assertIsNotNone(user1.follows.first())
+        self.assertIsNotNone(user2.followed_by.first())
+
+        self.assertEqual(user1.follows.first().followed.username, user2.username)
+        self.assertEqual(user2.followed_by.first().follower.username, user1.username)
+
+
+        user1.unfollow(user2)
+        app_database.session.commit()
+
+        self.assertIsNone(user1.follows.first())
+        self.assertIsNone(user2.followed_by.first())

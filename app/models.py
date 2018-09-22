@@ -61,6 +61,14 @@ class Answer(app_database.Model):
     answer_content = app_database.Column(app_database.String(500))
     question_id = app_database.Column(app_database.Integer, app_database.ForeignKey('questions.id'))
 
+class Follow(app_database.Model):
+    __tablename__ = 'follows'
+
+    id = app_database.Column(app_database.Integer, primary_key=True)
+    timestamp = app_database.Column(app_database.DateTime, default=datetime.datetime.utcnow)    
+    follower_id = app_database.Column(app_database.Integer, app_database.ForeignKey('users.id'))
+    followed_id = app_database.Column(app_database.Integer, app_database.ForeignKey('users.id'))
+
 class User(UserMixin, app_database.Model):
     __tablename__ = "users"
     
@@ -80,8 +88,20 @@ class User(UserMixin, app_database.Model):
                                               foreign_keys=[Question.asker_id],
                                               backref=app_database.backref('asker', lazy='joined'),
                                               lazy='dynamic')
+    follows = app_database.relationship('Follow',
+                                        foreign_keys=[Follow.follower_id],
+                                        backref=app_database.backref('follower', lazy='joined'),
+                                        lazy='dynamic',
+                                        cascade='all, delete-orphan')
+    followed_by = app_database.relationship('Follow',
+                                            foreign_keys=[Follow.followed_id],
+                                            backref=app_database.backref('followed', lazy='joined'),
+                                            lazy='dynamic',
+                                            cascade='all, delete-orphan')
     fake_user_questions_count = 20
     fake_user_answers_count = fake_user_questions_count - 2
+    fake_followers_count = 20
+    fake_followed_count = fake_followers_count - 2    
 
     @staticmethod
     def generate_fake_users(count=100, confirm_accounts=True, user_role='user'):
@@ -127,6 +147,28 @@ class User(UserMixin, app_database.Model):
                                                                   variable_nb_words=True, 
                                                                   ext_word_list=None),
                                      question=question)
+        app_database.session.commit()
+
+    @staticmethod
+    def generate_fake_followers(username, count=fake_followers_count):
+        user = User.query.filter(User.username == username).first()
+        if not user:
+            return print('[Error] no user exist with the username provided')
+        for i in range(0, count):
+            follower = User.query.offset(random.randint(0, User.query.count() -1)).first()
+            if not follower.is_following(user):
+                follower.follow(user)
+        app_database.session.commit()
+
+    @staticmethod
+    def generate_fake_followed_users(username, count=fake_followed_count):
+        user = User.query.filter(User.username == username).first()
+        if not user:
+            return print('[Error] no user exist with the username provided')
+        for i in range(0, count):
+            followed = User.query.offset(random.randint(0, User.query.count() -1)).first()
+            if not user.is_following(followed):
+                user.follow(followed)
         app_database.session.commit()
 
     @property
@@ -207,3 +249,37 @@ class User(UserMixin, app_database.Model):
             if question.answer:
                 answered_questions.append(question)
         return answered_questions
+
+
+    def follow(self, user):
+        if self.id != user.id:
+            if not self.is_following(user):
+                follow = Follow(follower_id=self.id, followed_id=user.id)
+                app_database.session.add(follow)
+
+    def unfollow(self, user):
+        followed = self.follows.filter(Follow.followed_id == user.id).first()
+        if followed:
+            app_database.session.delete(followed)
+
+    def is_following(self, user):
+        if self.follows.filter(Follow.followed_id == user.id).first():
+            return True
+        return False
+    
+    def is_followed_by(self, user):
+        if self.followed_by.filter(Follow.follower_id == user.id).first():
+            return True
+        return False
+
+    def get_followers_list(self):
+        followers_list = []
+        for follow in self.followed_by.all():
+            followers_list.append(follow.follower)
+        return followers_list
+    
+    def get_followed_users_list(self):
+        followed_list = []
+        for follow in self.follows.all():
+            followed_list.append(follow.followed)
+        return followed_list
