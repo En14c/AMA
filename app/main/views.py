@@ -1,12 +1,13 @@
 from werkzeug.exceptions import NotFound
 from itsdangerous import TimedJSONWebSignatureSerializer, BadSignature
-from flask import render_template, abort, redirect, url_for, current_app
+from flask import render_template, abort, redirect, url_for, current_app, flash
 from flask_login import login_required, current_user
 from confg import TokenExpirationTime
 from app import app_database
-from app.models import User, AppPermissions, Role
+from app.models import User, AppPermissions, Role, Answer, Question
 from ..decorators import permissions_required
-from .forms import UserProfileEditForm, UserAccountControlForm, AccountsControlForm
+from .forms import UserProfileEditForm, UserAccountControlForm, AccountsControlForm, \
+                   UserAskQuestion, UserAnswerQuestion
 from . import main
 
 @main.app_context_processor
@@ -24,7 +25,39 @@ def user_profile(username):
     user = User.query.filter(User.username == username).first()
     if not user:
         abort(NotFound.code)
-    return render_template('main/user/user_profile.html', user=user)
+    return render_template('main/user/user_profile.html', 
+                           user=user, answered_questions=user.get_answered_questions(),
+                           unanswered_questions=user.get_unanswered_questions())
+
+@main.route('/u/<username>/ask-question', methods=['GET', 'POST'])
+@login_required
+@permissions_required(AppPermissions.ASK)
+def user_ask_question(username):
+    if current_user.username == username:
+        return redirect(url_for('main.home'))
+    ask_question_form = UserAskQuestion()
+    user = User.query.filter(User.username == username).first()
+    if not user:
+        abort(NotFound.code)
+    if ask_question_form.validate_on_submit():
+        current_user.ask_question(question_content=ask_question_form.question.data,
+                                  question_recipient=user)
+        flash('your question was sent successfully', category='info')
+        return redirect(url_for('main.home'))
+    return render_template('main/user/ask-question-form.html', form=ask_question_form, user=user)
+
+@main.route('/u/<username>/answer/<int:question_id>', methods=['GET', 'POST'])
+@login_required
+def user_answer_question(username, question_id):
+    question = Question.query.get_or_404(question_id)
+    if current_user.username != username or question.answer:
+        return redirect(url_for('main.home'))
+    answer_question_form = UserAnswerQuestion()
+    if answer_question_form.validate_on_submit():
+        current_user.answer_question(answer_content=answer_question_form.answer.data,
+                                     question=question)
+        return redirect(url_for('main.user_profile', username=current_user.username))
+    return render_template('main/user/answer-question-form.html', form=answer_question_form)
 
 @main.route('/u/<username>/edit-profile', methods=['GET', 'POST'])
 @login_required

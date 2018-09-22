@@ -50,3 +50,13 @@ class UserAccountControlForm(FlaskForm):
         if self.user.email != field.data and \
                      User.query.filter(User.email == field.data).first():
             raise ValidationError(validation_error_msgs['email_used'])
+
+class UserAskQuestion(FlaskForm):
+    question = TextAreaField('question', validators=[Required(), Length(1, 500)])
+    recaptcha = RecaptchaField()
+    submit = SubmitField('submit')
+
+class UserAnswerQuestion(FlaskForm):
+    answer = TextAreaField('answer', validators=[Required(), Length(1, 500)])
+    recaptcha = RecaptchaField()
+    submit = SubmitField('submit')

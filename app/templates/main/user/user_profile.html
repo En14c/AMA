@@ -23,6 +23,72 @@
         <div class="text-center" style="padding: 5px 60px;">
         {{ user.about_me }}
         </div>
+        {% if current_user.username != user.username %}
+        <hr style="width:20%">
+        <div class="text-center">
+            <a class="btn btn-primary" href="{{ url_for('main.user_ask_question', username=user.username) }}">
+                Ask
+            </a>
+        </div>
+        {% endif %}
+        <div>
+            <ul class="nav nav-tabs" id="questions-tabs" style="margin-bottom:20px;">
+                <li class="nav-item">
+                    <a class="nav-link active" id="answered-questions-tab" data-toggle="tab" href="#answered-questions">
+                      All
+                    </a>
+                </li>
+                {% if current_user.username == user.username %}
+                <li class="nav-item">
+                    <a class="nav-link" id="unanswered-questions-tab" data-toggle="tab" href="#unanswered-questions">
+                        {% if unanswered_questions %}
+                        <span class="badge badge-primary badge-pill">{{ unanswered_questions|length }}</span>
+                        {% endif %}
+                        unanswered questions
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+            <div class="tab-content" id="questions-tabs-content">
+                <div class="tab-pane fade show active" id="answered-questions">
+                    {% for question in answered_questions %}
+                    <div>
+                        <a href="{{ url_for('main.user_profile', username=question.asker.username)}}">
+                            <img class="img-thumbnail" src="{{ question.asker.generate_gravatar_uri(18) }}">
+                            {{ question.asker.username }}
+                        </a>
+                    </div>
+                    <div>
+                        <p style="font-weight:bold;margin-bottom:8px;">Q: {{ question.question_content }}</p>
+                        <p>{{ question.answer.answer_content }}</p>
+                    </div>
+                    <hr style="width: 50%;">
+                    {% endfor %}
+                </div>
+                {% if current_user.username == user.username %}
+                <div class="tab-pane fade" id='unanswered-questions'>
+                    {% if unanswered_questions %}
+                    {% for question in unanswered_questions %}
+                    <div>
+                        <a href="{{ url_for('main.user_profile', username=question.asker.username)}}">
+                            <img class="img-thumbnail" src="{{ question.asker.generate_gravatar_uri(18) }}">
+                            {{ question.asker.username }}
+                        </a>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <p style="font-weight:bold;" class="">Q: {{ question.question_content }}</p>
+                        <a href="{{ url_for('main.user_answer_question', username=current_user.username, question_id=question.id) }}">
+                            Answer
+                        </a>
+                    </div>
+                    <hr style="width: 50%;">
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
     </div>
 {% endblock %}
 

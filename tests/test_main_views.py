@@ -1,8 +1,10 @@
 import unittest, time
+from werkzeug.exceptions import Forbidden, NotFound
+from faker import Faker
 from itsdangerous import TimedJSONWebSignatureSerializer
 from flask import url_for
 from app import app_database, create_app
-from app.models import User, Role
+from app.models import User, Role, AppPermissions
 from confg import app_config, TokenExpirationTime
 
 class TestMainViews(unittest.TestCase):
@@ -275,3 +277,162 @@ class TestMainViews(unittest.TestCase):
                                                       'account_confirmation': True,
                                                       'user_role': user_role.id}, follow_redirects=True)
                 self.assertTrue('testing-user-profile-AMA' in response.get_data(as_text=True))
+
+    def test_user_ask_question(self):
+        '''
+        test 5 cases:
+            [1] user must be logged in
+            [2] user has the permissions to ask questions
+            [3] user's username is the same as the one in the uri [user is asking himself] (not allowed)
+            [4] user is requesting to ask a non-existent user
+            [5] 1 <= question's length <= 500
+        '''
+        fake = Faker()
+        Role.populate_table()
+        User.generate_fake_users(count=2)
+        testuser1, testuser2 = User.query.get(1), User.query.get(2)
+        testuser1.password = '123'
+
+        with self.app.test_request_context():
+            with self.app.test_client() as app_test_client:
+                #case [1]
+                response = app_test_client.get(url_for('main.user_ask_question', 
+                                                       username=testuser2.username),
+                                               follow_redirects=True)
+                self.assertTrue('testing-signin-AMA' in response.get_data(as_text=True))
+
+                app_test_client.post(url_for('auth.signin'), data={'username': testuser1.username,
+                                                                   'password': '123'})
+                
+                response = app_test_client.get(url_for('main.user_ask_question',
+                                                       username=testuser2.username))
+                self.assertTrue('testing-ask-question-form-AMA' in response.get_data(as_text=True))
+
+                #case [2]
+                testuser1.role.permissions &= AppPermissions.FOLLOW_OTHERS
+                response = app_test_client.get(url_for('main.user_ask_question',
+                                                       username=testuser2.username))
+                self.assertEqual(response.status_code, Forbidden.code)
+                testuser1.role.permissions = Role.roles['user']
+
+                #case [3]
+                response = app_test_client.get(url_for('main.user_ask_question',
+                                                       username=testuser1.username),
+                                               follow_redirects=True)
+                self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
+
+                #case [4]
+                response = app_test_client.get(url_for('main.user_ask_question',
+                                                       username=fake.user_name()))
+                self.assertEqual(response.status_code, NotFound.code)
+
+                #case [5]
+                question_content_void = ''
+                question_content_long = fake.sentence(nb_words=600, 
+                                                      variable_nb_words=True, ext_word_list=None)
+                question_content_short = fake.sentence(nb_words=50, 
+                                                       variable_nb_words=True, ext_word_list=None)
+                
+                response = app_test_client.post(url_for('main.user_ask_question',
+                                                        username=testuser2.username), 
+                                                data={'question': question_content_void})
+                self.assertTrue('testing-ask-question-form-AMA' in response.get_data(as_text=True))
+
+                response = app_test_client.post(url_for('main.user_ask_question',
+                                                        username=testuser2.username), 
+                                                data={'question': question_content_long})
+                self.assertTrue('testing-ask-question-form-AMA' in response.get_data(as_text=True))
+
+                response = app_test_client.post(url_for('main.user_ask_question',
+                                                        username=testuser2.username), 
+                                                data={'question': question_content_short},
+                                                follow_redirects=True)
+                self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
+
+                #confirm the database transaction
+                self.assertIsNotNone(testuser2.in_questions.first())
+                self.assertIsNotNone(testuser1.out_questions.first())
+
+    def test_user_answer_question(self):
+        '''
+        test x cases:
+            [1] user must be logged in
+            [2] username in the uri must be the same for the logged in user
+            [3] invalid question id
+            [4] 1 <= answer's length <= 500
+            [5] question is already answered
+        '''
+        fake = Faker()
+        Role.populate_table()
+        User.generate_fake_users(count=2)
+        testuser1, testuser2 = User.query.get(1), User.query.get(2)
+        testuser1.password = '123'
+        User.generate_fake_questions(testuser1.username, count=1)
+        test_question = testuser1.in_questions.first()
+
+        with self.app.test_request_context():
+            with self.app.test_client() as app_test_client:
+                #case [1]
+                response = app_test_client.get(url_for('main.user_answer_question', 
+                                                       username=testuser1.username,
+                                                       question_id=test_question.id),
+                                               follow_redirects=True)
+                self.assertTrue('testing-signin-AMA' in response.get_data(as_text=True))
+
+                app_test_client.post(url_for('auth.signin'), data={'username': testuser1.username,
+                                                                   'password': '123'})
+                
+                response = app_test_client.get(url_for('main.user_answer_question',
+                                                       username=testuser1.username,
+                                                       question_id=test_question.id))
+                self.assertTrue('testing-answer-question-form-AMA' in response.get_data(as_text=True))
+
+                #case [2]
+                response = app_test_client.get(url_for('main.user_answer_question', 
+                                                       username=testuser2.username, 
+                                                       question_id=test_question.id),
+                                               follow_redirects=True)
+                self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
+
+                #case [3]
+                response = app_test_client.get(url_for('main.user_answer_question', 
+                                                       username=testuser1.username, 
+                                                       question_id=fake.random_number(digits=4)),
+                                               follow_redirects=True)
+                self.assertEqual(response.status_code, NotFound.code)
+
+                #case [4]
+                answer_content_void = ''
+                answer_content_long = fake.sentence(nb_words=600, 
+                                                    variable_nb_words=True, ext_word_list=None)
+                answer_content_short = fake.sentence(nb_words=40, 
+                                                     variable_nb_words=True, ext_word_list=None)
+                
+                response = app_test_client.post(url_for('main.user_answer_question',
+                                                        username=testuser1.username, 
+                                                        question_id=test_question.id),
+                                                data={'answer': answer_content_void},
+                                                follow_redirects=True)
+                self.assertTrue('testing-answer-question-form-AMA' in response.get_data(as_text=True))
+
+                response = app_test_client.post(url_for('main.user_answer_question',
+                                                        username=testuser1.username, 
+                                                        question_id=test_question.id),
+                                                data={'answer': answer_content_long},
+                                                follow_redirects=True)
+                self.assertTrue('testing-answer-question-form-AMA' in response.get_data(as_text=True))                
+
+                response = app_test_client.post(url_for('main.user_answer_question',
+                                                        username=testuser1.username, 
+                                                        question_id=test_question.id),
+                                                data={'answer': answer_content_short},
+                                                follow_redirects=True)
+                self.assertTrue('testing-user-profile-AMA' in response.get_data(as_text=True))
+
+                #case [5]
+                response = app_test_client.post(url_for('main.user_answer_question',
+                                                        username=testuser1.username, 
+                                                        question_id=test_question.id),
+                                                data={'answer': answer_content_short},
+                                                follow_redirects=True)
+                self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
