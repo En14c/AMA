@@ -53,16 +53,36 @@
             <ul class="nav nav-tabs" id="questions-tabs" style="margin-bottom:20px;">
                 <li class="nav-item">
                     <a class="nav-link active" id="answered-questions-tab" data-toggle="tab" href="#answered-questions">
-                      All
+                      Answered Questions
                     </a>
                 </li>
                 {% if current_user.username == user.username %}
+                {% if unanswered_questions %}
                 <li class="nav-item">
                     <a class="nav-link" id="unanswered-questions-tab" data-toggle="tab" href="#unanswered-questions">
-                        {% if unanswered_questions %}
                         <span class="badge badge-primary badge-pill">{{ unanswered_questions|length }}</span>
-                        {% endif %}
-                        unanswered questions
+                        Unanswered Questions
+                    </a>
+                </li>
+                {% endif %}
+                {% endif %}
+                {% if user.get_followed_users_list() %}
+                <li class="nav-item">
+                    <a class="nav-link" id="following-tab" data-toggle="tab" href="#following">
+                        <span class="badge badge-primary badge-pill">
+                            {{ user.get_followed_users_list()|length }}
+                        </span>
+                        Following
+                    </a>
+                </li>
+                {% endif %}
+                {% if user.get_followers_list() %}
+                <li class="nav-item">
+                    <a class="nav-link" id="followers-tab" data-toggle="tab" href="#followers">
+                        <span class="badge badge-primary badge-pill">
+                            {{ user.get_followers_list()|length }}
+                        </span>
+                        Followers
                     </a>
                 </li>
                 {% endif %}
@@ -84,8 +104,8 @@
                     {% endfor %}
                 </div>
                 {% if current_user.username == user.username %}
-                <div class="tab-pane fade" id='unanswered-questions'>
-                    {% if unanswered_questions %}
+                {% if unanswered_questions %}                
+                <div class="tab-pane fade" id="unanswered-questions">
                     {% for question in unanswered_questions %}
                     <div>
                         <a href="{{ url_for('main.user_profile', username=question.asker.username)}}">
@@ -101,7 +121,35 @@
                     </div>
                     <hr style="width: 50%;">
                     {% endfor %}
-                    {% endif %}
+                </div>
+                {% endif %}
+                {% endif %}
+                {% if user.get_followed_users_list() %}
+                <div class="tab-pane fade" id="following">
+                    {% for followed_user in user.get_followed_users_list() %}
+                    <div>
+                        <a href="{{ url_for('main.user_profile', username=followed_user.username) }}">
+                            <img class="img-thumbnail" src="{{ followed_user.generate_gravatar_uri(30) }}">
+                            <span style="font-weight:bold;">
+                                {{ followed_user.username }}
+                            </span>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if user.get_followers_list() %}
+                <div class="tab-pane fade" id="followers">
+                    {% for follower in user.get_followers_list() %}
+                    <div>
+                        <a href="{{ url_for('main.user_profile', username=follower.username) }}">
+                            <img class="img-thumbnail" src="{{ follower.generate_gravatar_uri(30) }}">
+                            <span style="font-weight:bold;">
+                                {{ follower.username }}
+                            </span>
+                        </a>
+                    </div>
+                    {% endfor %}
                 </div>
                 {% endif %}
             </div>
