@@ -17,7 +17,24 @@
     </div>
             
     <div class="container page-content">
-        AMA Home
+        {% for question in questions_list %}
+        <div>
+            <a href="{{ url_for('main.user_profile', username=question.asker.username) }}">
+                <img class="img-thumbnail" src="{{ question.asker.generate_gravatar_uri(18) }}">
+                {{ question.asker.username }}
+            </a>
+            To
+            <a href="{{ url_for('main.user_profile', username=question.replier.username) }}">
+                <img class="img-thumbnail" src="{{ question.replier.generate_gravatar_uri(18) }}">
+                {{ question.replier.username }}
+            </a>
+        </div>
+        <div>
+            <p style="font-weight:bold;margin-bottom:8px;">Q: {{ question.question_content }}</p>
+            <p>{{ question.answer.answer_content }}</p>
+        </div>
+        <hr style="width: 50%;">      
+        {% endfor %}
     </div>
 {% endblock %}
 

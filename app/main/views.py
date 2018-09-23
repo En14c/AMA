@@ -1,3 +1,4 @@
+import random
 from werkzeug.exceptions import NotFound
 from itsdangerous import TimedJSONWebSignatureSerializer, BadSignature
 from flask import render_template, abort, redirect, url_for, current_app, flash
@@ -17,7 +18,15 @@ def templates_add_app_permissions():
 @main.route('/')
 @login_required
 def home():
-    return render_template('main/home.html')
+    questions_list = []
+    for user in current_user.get_followed_users_list():
+        for question in (user
+                         .in_questions
+                         .order_by(Question.timestamp.desc()).limit(5).all()):
+            if question.answer:
+                questions_list.append(question)
+    random.shuffle(questions_list)
+    return render_template('main/home.html', questions_list=questions_list)
 
 @main.route('/u/<username>')
 @login_required
