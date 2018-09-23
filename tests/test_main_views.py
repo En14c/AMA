@@ -355,7 +355,7 @@ class TestMainViews(unittest.TestCase):
 
     def test_user_answer_question(self):
         '''
-        test x cases:
+        test 5 cases:
             [1] user must be logged in
             [2] username in the uri must be the same for the logged in user
             [3] invalid question id
@@ -436,3 +436,129 @@ class TestMainViews(unittest.TestCase):
                                                 data={'answer': answer_content_short},
                                                 follow_redirects=True)
                 self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
+
+    def test_follow_user(self):
+        '''
+        test 4 cases:
+            [1] user is logged in and has the permissions to follow/unfollow other users
+            [2] no user exists with the username in the requested uri
+            [3] user can't request follow himself
+            [4] the logged in user is already following that user 
+        '''
+        Role.populate_table()
+        user_role = Role.query.filter(Role.role_name == 'user').first()
+        fake = Faker()
+        testuser1 = User(username=fake.user_name(), role=user_role, account_confirmed=True,
+                         email=fake.safe_email())
+        testuser2 = User(username=fake.user_name(), role=user_role, account_confirmed=True,
+                         email=fake.safe_email())
+        testuser1.password = '123'
+        app_database.session.add_all([testuser1, testuser2])
+        app_database.session.commit()
+
+        with self.app.test_request_context():
+            with self.app.test_client() as app_test_client:
+                #case 1
+                response = app_test_client.get(url_for('main.follow_user', 
+                                                       username=testuser2.username),
+                                               follow_redirects=True)
+                self.assertTrue('testing-signin-AMA' in response.get_data(as_text=True))
+
+                app_test_client.post(url_for('auth.signin'), data={
+                    'username': testuser1.username,
+                    'password': '123'})
+                
+                response = app_test_client.get(url_for('main.follow_user',
+                                                       username=testuser2.username), 
+                                               follow_redirects=True)
+                self.assertTrue('testing-user-profile-AMA' in response.get_data(as_text=True))
+                self.assertEqual(testuser1.follows.count(), 1)
+
+                testuser1.role.permissions &= ~AppPermissions.FOLLOW_OTHERS
+                response = app_test_client.get(url_for('main.follow_user',
+                                                       username=testuser2.username))
+                self.assertEqual(response.status_code, Forbidden.code)
+                testuser1.role.permissions = Role.roles['user']
+
+                #case [2]
+                response = app_test_client.get(url_for('main.follow_user', 
+                                                       username=fake.user_name()))
+                self.assertEqual(response.status_code, NotFound.code)
+
+                #case [3]
+                response = app_test_client.get(url_for('main.follow_user',
+                                                       username=testuser1.username),
+                                               follow_redirects=True)
+                self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
+
+                #case [4]
+                response = app_test_client.get(url_for('main.follow_user',
+                                                       username=testuser2.username),
+                                               follow_redirects=True)
+                self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
+
+    def test_unfollow_user(self):
+        '''
+        test 4 cases:
+            [1] user is logged in and has the permissions to follow/unfollow other users
+            [2] no user exists with the username in the uri
+            [3] user can't unfollow himself
+            [4] the logged in user is not following that user
+        '''
+        Role.populate_table()
+        fake = Faker()
+        user_role = Role.query.filter(Role.role_name == 'user').first()
+        testuser1 = User(username=fake.user_name(), role=user_role, account_confirmed=True,
+                         email=fake.safe_email())
+        testuser2 = User(username=fake.user_name(), role=user_role, account_confirmed=True,
+                         email=fake.safe_email())
+        testuser1.password = '123'
+        app_database.session.add_all([testuser1, testuser2])
+        app_database.session.commit()
+        testuser1.follow(testuser2)
+        app_database.session.commit()
+
+        with self.app.test_request_context():
+            with self.app.test_client() as app_test_client:
+                #case [1]
+                response = app_test_client.get(url_for('main.unfollow_user', 
+                                                       username=testuser2.username), 
+                                               follow_redirects=True)
+                self.assertTrue('testing-signin-AMA' in response.get_data(as_text=True))
+
+                app_test_client.post(url_for('auth.signin'), data={
+                    'username': testuser1.username,
+                    'password': '123'})
+
+                testuser1.role.permissions &= ~AppPermissions.FOLLOW_OTHERS
+                response = app_test_client.get(url_for('main.unfollow_user', 
+                                                       username=testuser2.username))
+                self.assertEqual(response.status_code, Forbidden.code)
+                testuser1.role.permissions = Role.roles['user']
+
+                response = app_test_client.get(url_for('main.unfollow_user', 
+                                                       username=testuser2.username), 
+                                               follow_redirects=True)
+                self.assertTrue('testing-user-profile-AMA' in response.get_data(as_text=True))
+                self.assertEqual(testuser1.follows.count(), 0)
+                self.assertEqual(testuser2.followed_by.count(), 0)
+
+                #case [2]
+                response = app_test_client.get(url_for('main.unfollow_user', 
+                                                       username=fake.user_name()))
+                self.assertEqual(response.status_code, NotFound.code)
+
+                #case [3]
+                response = app_test_client.get(url_for('main.unfollow_user', 
+                                                       username=testuser1.username), 
+                                               follow_redirects=True)
+                self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
+
+                #case [4]
+                response = app_test_client.get(url_for('main.unfollow_user',
+                                                       username=testuser2.username), 
+                                               follow_redirects=True)
+                self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
+
+
+                

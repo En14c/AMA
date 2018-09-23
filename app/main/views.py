@@ -4,7 +4,7 @@ from flask import render_template, abort, redirect, url_for, current_app, flash
 from flask_login import login_required, current_user
 from confg import TokenExpirationTime
 from app import app_database
-from app.models import User, AppPermissions, Role, Answer, Question
+from app.models import User, AppPermissions, Role, Question
 from ..decorators import permissions_required
 from .forms import UserProfileEditForm, UserAccountControlForm, AccountsControlForm, \
                    UserAskQuestion, UserAnswerQuestion
@@ -111,3 +111,27 @@ def user_account_control(token, username):
     form.account_confirmation.data = user.account_confirmed
     form.user_role.data = user.role_id
     return render_template('main/user/user_account_control_admin.html', form=form)
+
+@main.route('/u/<username>/follow')
+@login_required
+@permissions_required(AppPermissions.FOLLOW_OTHERS)
+def follow_user(username):
+    user = User.query.filter(User.username == username).first()
+    if not user:
+        abort(NotFound.code)
+    if current_user.username == username or current_user.is_following(user):
+        return redirect(url_for('main.home'))
+    current_user.follow(user)
+    return redirect(url_for('main.user_profile', username=user.username))
+
+@main.route('/u/<username>/unfollow')
+@login_required
+@permissions_required(AppPermissions.FOLLOW_OTHERS)
+def unfollow_user(username):
+    user = User.query.filter(User.username == username).first()
+    if not user:
+        abort(NotFound.code)
+    if current_user.username == username or not current_user.is_following(user):
+        return redirect(url_for('main.home'))
+    current_user.unfollow(user)
+    return redirect(url_for('main.user_profile', username=user.username))
