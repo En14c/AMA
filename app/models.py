@@ -49,6 +49,7 @@ class Question(app_database.Model):
     timestamp = app_database.Column(app_database.DateTime, default=datetime.datetime.utcnow)
     asker_id = app_database.Column(app_database.Integer, app_database.ForeignKey('users.id'))
     replier_id = app_database.Column(app_database.Integer, app_database.ForeignKey('users.id'))
+    has_answer = app_database.Column(app_database.Boolean, default=False)
     answer = app_database.relationship('Answer',
                                        uselist=False,
                                        backref=app_database.backref('question', lazy='joined'),
@@ -142,7 +143,7 @@ class User(UserMixin, app_database.Model):
         questions = Question.query.filter(Question.replier_id == user.id)
         for i in range(0, count):
             question = questions.offset(random.randint(0, questions.count() - 1)).first()
-            if not question.answer:
+            if not question.has_answer:
                 user.answer_question(answer_content=fake.sentence(nb_words=10, 
                                                                   variable_nb_words=True, 
                                                                   ext_word_list=None),
@@ -227,29 +228,27 @@ class User(UserMixin, app_database.Model):
         app_database.session.add(question)
     
     def answer_question(self, answer_content, question):
+        question.has_answer = True
         answer = Answer(answer_content=answer_content, question=question)
         app_database.session.add(answer)
 
-    def get_unanswered_questions(self):
+    def get_unanswered_questions(self, num_questions=-1):
         unanswered_questions = []
-        for question in (Question
-                         .query
-                         .filter(Question.replier_id == self.id)
-                         .order_by(Question.timestamp.desc()).all()):
-            if not question.answer:
-                unanswered_questions.append(question)
+        for question in (self.in_questions
+                             .filter(Question.has_answer.is_(False))
+                             .order_by(Question.timestamp.desc())
+                             .limit(num_questions).all()):
+            unanswered_questions.append(question)
         return unanswered_questions
 
-    def get_answered_questions(self):
+    def get_answered_questions(self, num_questions=-1):
         answered_questions = []
-        for question in (Question
-                         .query
-                         .filter(Question.replier_id == self.id)
-                         .order_by(Question.timestamp.desc()).all()):
-            if question.answer:
-                answered_questions.append(question)
+        for question in (self.in_questions
+                             .filter(Question.has_answer.is_(True))
+                             .order_by(Question.timestamp.desc())
+                             .limit(num_questions).all()):
+            answered_questions.append(question)
         return answered_questions
-
 
     def follow(self, user):
         if self.id != user.id:

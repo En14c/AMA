@@ -185,29 +185,36 @@ class TestUserModel(unittest.TestCase):
         self.assertIsNotNone(answer)
 
     def test_get_answered_unanswered_questions(self):
-        q1_content = 'question1 ?'
-        q2_content = 'question2 ?'
-        q3_content = 'question3 ?'
-        ans1_content = 'answer1.'
-        ans2_content = 'answer2.'
+        q_content = 'question{}?'
+        ans_content = 'answer{}'
 
         u1, u2 = User(username='testuser1'), User(username='testuser2')
         app_database.session.add_all([u1, u2])
         app_database.session.commit()
 
-        u1.ask_question(question_content=q1_content, question_recipient=u2)
-        u1.ask_question(question_content=q2_content, question_recipient=u2)
-        u1.ask_question(question_content=q3_content, question_recipient=u2)
+        u1.ask_question(question_content=q_content.format(1), question_recipient=u2)
+        u1.ask_question(question_content=q_content.format(2), question_recipient=u2)
+        u1.ask_question(question_content=q_content.format(3), question_recipient=u2)
+        u1.ask_question(question_content=q_content.format(4), question_recipient=u2)
         app_database.session.commit()
 
-        u2.answer_question(answer_content=ans1_content, question=u1.out_questions.first())
-        u2.answer_question(answer_content=ans2_content, question=u1.out_questions.offset(1).first())
+        u2.answer_question(answer_content=ans_content.format(1), question=u1.out_questions.first())
+        u2.answer_question(answer_content=ans_content.format(2), question=u1.out_questions.offset(1).first())
         app_database.session.commit()
+
+        self.assertTrue(u2.in_questions.first().has_answer)
+        self.assertTrue(u2.in_questions.offset(1).first().has_answer)
+        self.assertFalse(u2.in_questions.offset(2).first().has_answer)
+        self.assertFalse(u2.in_questions.offset(3).first().has_answer)
 
         answered_questions = u2.get_answered_questions()
         self.assertEqual(len(answered_questions), 2)
+        answered_questions = u2.get_answered_questions(1)
+        self.assertEqual(len(answered_questions), 1)
 
         unanswered_questions = u2.get_unanswered_questions()
+        self.assertEqual(len(unanswered_questions), 2)
+        unanswered_questions = u2.get_unanswered_questions(1)
         self.assertEqual(len(unanswered_questions), 1)
 
     def test_get_followers_followed_list(self):
