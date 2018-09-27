@@ -39,12 +39,12 @@ def user_profile(username):
 @login_required
 @permissions_required(AppPermissions.ASK)
 def user_ask_question(username):
-    if current_user.username == username:
-        return redirect(url_for('main.home'))
-    ask_question_form = UserAskQuestion()
     user = User.load_user_by_username(username)
     if not user:
         abort(NotFound.code)
+    if current_user.username == username:
+        return redirect(url_for('main.home'))
+    ask_question_form = UserAskQuestion()
     if ask_question_form.validate_on_submit():
         current_user.ask_question(question_content=ask_question_form.question.data,
                                   question_recipient=user)
