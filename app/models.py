@@ -21,6 +21,14 @@ class Role(app_database.Model):
     users = app_database.relationship('User', backref=app_database.backref('role', lazy='joined'),
                                       lazy='dynamic')
 
+    @staticmethod
+    def load_role_by_id(role_id):
+        return Role.query.get(role_id)
+
+    @staticmethod
+    def load_role_by_name(role_name):
+        return Role.query.filter(Role.role_name == role_name).first()
+
     roles = {
         'user': AppPermissions.ASK | \
                 AppPermissions.FOLLOW_OTHERS,
@@ -54,6 +62,14 @@ class Question(app_database.Model):
                                        uselist=False,
                                        backref=app_database.backref('question', lazy='joined'),
                                        lazy='joined')
+
+    @staticmethod
+    def load_question_by_id(question_id):
+        return Question.query.get(question_id)
+    
+    @staticmethod
+    def load_question_by_id_or_404(question_id):
+        return Question.query.get_or_404(question_id)
 
 class Answer(app_database.Model):
     __tablename__ = 'answers'
@@ -171,6 +187,14 @@ class User(UserMixin, app_database.Model):
             if not user.is_following(followed):
                 user.follow(followed)
         app_database.session.commit()
+
+    @staticmethod
+    def load_user_by_username(username):
+        return User.query.filter(User.username == username).first()
+
+    @staticmethod
+    def load_user_by_email_addr(email_addr):
+        return User.query.filter(User.email == email_addr).first()
 
     @property
     def password(self):

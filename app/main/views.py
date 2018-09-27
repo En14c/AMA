@@ -20,18 +20,15 @@ def templates_add_app_permissions():
 def home():
     questions_list = []
     for user in current_user.get_followed_users_list():
-        for question in (user
-                         .in_questions
-                         .order_by(Question.timestamp.desc()).limit(5).all()):
-            if question.answer:
-                questions_list.append(question)
+        for question in user.get_answered_questions(num_questions=5):
+            questions_list.append(question)
     random.shuffle(questions_list)
     return render_template('main/home.html', questions_list=questions_list)
 
 @main.route('/u/<username>')
 @login_required
 def user_profile(username):
-    user = User.query.filter(User.username == username).first()
+    user = User.load_user_by_username(username)
     if not user:
         abort(NotFound.code)
     return render_template('main/user/user_profile.html', 
@@ -45,7 +42,7 @@ def user_ask_question(username):
     if current_user.username == username:
         return redirect(url_for('main.home'))
     ask_question_form = UserAskQuestion()
-    user = User.query.filter(User.username == username).first()
+    user = User.load_user_by_username(username)
     if not user:
         abort(NotFound.code)
     if ask_question_form.validate_on_submit():
@@ -58,8 +55,8 @@ def user_ask_question(username):
 @main.route('/u/<username>/answer/<int:question_id>', methods=['GET', 'POST'])
 @login_required
 def user_answer_question(username, question_id):
-    question = Question.query.get_or_404(question_id)
-    if current_user.username != username or question.answer:
+    question = Question.load_question_by_id_or_404(question_id)
+    if current_user.username != username or question.has_answer:
         return redirect(url_for('main.home'))
     answer_question_form = UserAnswerQuestion()
     if answer_question_form.validate_on_submit():
@@ -106,14 +103,14 @@ def user_account_control(token, username):
         token_verify.loads(token)
     except BadSignature:
         abort(NotFound.code)
-    user = User.query.filter(User.username == username).first()
+    user = User.load_user_by_username(username)
     if not user:
         abort(NotFound.code)
     form = UserAccountControlForm(user)
     if form.validate_on_submit():
         user.email = form.email.data
         user.account_confirmed = form.account_confirmation.data
-        user.role = Role.query.get(form.user_role.data)
+        user.role = Role.load_role_by_id(form.user_role.data)
         app_database.session.add(user)
         return redirect(url_for('main.user_profile', username=current_user.username))
     form.email.data = user.email
@@ -125,7 +122,7 @@ def user_account_control(token, username):
 @login_required
 @permissions_required(AppPermissions.FOLLOW_OTHERS)
 def follow_user(username):
-    user = User.query.filter(User.username == username).first()
+    user = User.load_user_by_username(username)
     if not user:
         abort(NotFound.code)
     if current_user.username == username or current_user.is_following(user):
@@ -137,7 +134,7 @@ def follow_user(username):
 @login_required
 @permissions_required(AppPermissions.FOLLOW_OTHERS)
 def unfollow_user(username):
-    user = User.query.filter(User.username == username).first()
+    user = User.load_user_by_username(username)
     if not user:
         abort(NotFound.code)
     if current_user.username == username or not current_user.is_following(user):

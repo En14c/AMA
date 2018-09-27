@@ -51,9 +51,9 @@ def signup():
     signup_form = SignUpForm()
     if signup_form.validate_on_submit():
         if signup_form.email.data in current_app.config['ADMIN_MAIL_LIST']:
-            role = Role.query.filter(Role.role_name == 'admin').first()
+            role = Role.load_role_by_name(role_name='admin')
         else:
-            role = Role.query.filter(Role.role_name == 'user').first()
+            role = Role.load_role_by_name(role_name='user')
         new_user = User(username=signup_form.username.data, email=signup_form.email.data,
                         password=signup_form.password.data, role=role)
         app_database.session.add(new_user)
@@ -196,7 +196,7 @@ def password_reset_confirm(confirmation_token):
         return redirect(url_for('auth.signin'))
     form = PasswordResetForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=user_email).first()
+        user = User.load_user_by_email_addr(user_email)
         if user:
             user.password = form.password.data
             flash('your password have been updated successfully', category='info')
