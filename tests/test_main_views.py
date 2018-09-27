@@ -355,12 +355,13 @@ class TestMainViews(unittest.TestCase):
 
     def test_user_answer_question(self):
         '''
-        test 5 cases:
+        test 6 cases:
             [1] user must be logged in
-            [2] username in the uri must be the same for the logged in user
+            [2] user is requesting to answer arbitrary questions directed to other users not him
             [3] invalid question id
             [4] 1 <= answer's length <= 500
             [5] question is already answered
+            [6] the logged in user's username is not the same one in the uri
         '''
         fake = Faker()
         Role.populate_table()
@@ -368,14 +369,16 @@ class TestMainViews(unittest.TestCase):
         testuser1, testuser2 = User.query.get(1), User.query.get(2)
         testuser1.password = '123'
         User.generate_fake_questions(testuser1.username, count=1)
-        test_question = testuser1.in_questions.first()
+        User.generate_fake_questions(testuser2.username, count=1)
+        testuser1_question = testuser1.in_questions.first()
+        testuser2_question = testuser2.in_questions.first()
 
         with self.app.test_request_context():
             with self.app.test_client() as app_test_client:
                 #case [1]
                 response = app_test_client.get(url_for('main.user_answer_question', 
                                                        username=testuser1.username,
-                                                       question_id=test_question.id),
+                                                       question_id=testuser1_question.id),
                                                follow_redirects=True)
                 self.assertTrue('testing-signin-AMA' in response.get_data(as_text=True))
 
@@ -384,13 +387,13 @@ class TestMainViews(unittest.TestCase):
                 
                 response = app_test_client.get(url_for('main.user_answer_question',
                                                        username=testuser1.username,
-                                                       question_id=test_question.id))
+                                                       question_id=testuser1_question.id))
                 self.assertTrue('testing-answer-question-form-AMA' in response.get_data(as_text=True))
 
                 #case [2]
                 response = app_test_client.get(url_for('main.user_answer_question', 
-                                                       username=testuser2.username, 
-                                                       question_id=test_question.id),
+                                                       username=testuser1.username, 
+                                                       question_id=testuser2_question.id),
                                                follow_redirects=True)
                 self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
 
@@ -410,21 +413,21 @@ class TestMainViews(unittest.TestCase):
                 
                 response = app_test_client.post(url_for('main.user_answer_question',
                                                         username=testuser1.username, 
-                                                        question_id=test_question.id),
+                                                        question_id=testuser1_question.id),
                                                 data={'answer': answer_content_void},
                                                 follow_redirects=True)
                 self.assertTrue('testing-answer-question-form-AMA' in response.get_data(as_text=True))
 
                 response = app_test_client.post(url_for('main.user_answer_question',
                                                         username=testuser1.username, 
-                                                        question_id=test_question.id),
+                                                        question_id=testuser1_question.id),
                                                 data={'answer': answer_content_long},
                                                 follow_redirects=True)
                 self.assertTrue('testing-answer-question-form-AMA' in response.get_data(as_text=True))                
 
                 response = app_test_client.post(url_for('main.user_answer_question',
                                                         username=testuser1.username, 
-                                                        question_id=test_question.id),
+                                                        question_id=testuser1_question.id),
                                                 data={'answer': answer_content_short},
                                                 follow_redirects=True)
                 self.assertTrue('testing-user-profile-AMA' in response.get_data(as_text=True))
@@ -432,10 +435,16 @@ class TestMainViews(unittest.TestCase):
                 #case [5]
                 response = app_test_client.post(url_for('main.user_answer_question',
                                                         username=testuser1.username, 
-                                                        question_id=test_question.id),
+                                                        question_id=testuser1_question.id),
                                                 data={'answer': answer_content_short},
                                                 follow_redirects=True)
                 self.assertTrue('testing-home-AMA' in response.get_data(as_text=True))
+
+                #case [6]
+                reseponse = app_test_client.get(url_for('main.user_answer_question',
+                                                        username=testuser2.username,
+                                                        question_id=testuser1_question.id))
+                self.assertEqual(reseponse.status_code, 302)
 
     def test_follow_user(self):
         '''

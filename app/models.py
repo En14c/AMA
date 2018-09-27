@@ -256,6 +256,16 @@ class User(UserMixin, app_database.Model):
         answer = Answer(answer_content=answer_content, question=question)
         app_database.session.add(answer)
 
+    def is_question_replier(self, question):
+        if self.id == question.replier.id:
+            return True
+        return False
+
+    def is_question_asker(self, question):
+        if self.id == question.asker.id:
+            return True
+        return False
+
     def get_unanswered_questions(self, num_questions=-1):
         unanswered_questions = []
         for question in (self.in_questions

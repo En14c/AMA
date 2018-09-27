@@ -56,7 +56,9 @@ def user_ask_question(username):
 @login_required
 def user_answer_question(username, question_id):
     question = Question.load_question_by_id_or_404(question_id)
-    if current_user.username != username or question.has_answer:
+    if current_user.username != username \
+                    or not current_user.is_question_replier(question) \
+                    or question.has_answer:
         return redirect(url_for('main.home'))
     answer_question_form = UserAnswerQuestion()
     if answer_question_form.validate_on_submit():

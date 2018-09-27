@@ -165,6 +165,27 @@ class TestUserModel(unittest.TestCase):
         self.assertTrue(admin.has_permissions(Role.roles['admin']))
         self.assertTrue(admin.is_admin())
 
+    def test_is_question_replier_asker(self):
+        fake = Faker()
+        q_content = fake.sentence(nb_words=6, variable_nb_words=True, ext_word_list=None)
+        ans_content = fake.sentence(nb_words=6, variable_nb_words=True, ext_word_list=None)
+        testuser1 = User(username=fake.user_name())
+        testuser2 = User(username=fake.user_name())
+        app_database.session.add_all([testuser1, testuser2])
+        app_database.session.commit()
+
+        testuser1.ask_question(question_content=q_content, question_recipient=testuser2)
+        app_database.session.commit()
+
+        question = Question.load_question_by_id(1)
+        self.assertIsNotNone(question)
+
+        self.assertFalse(testuser1.is_question_replier(question))
+        self.assertTrue(testuser2.is_question_replier(question))
+
+        self.assertTrue(testuser1.is_question_asker(question))
+        self.assertFalse(testuser2.is_question_asker(question))
+
     def test_ask_qusetion_answer_question(self):
         q_content = 'question ?'
         ans_content = 'answer.'
