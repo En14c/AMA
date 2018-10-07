@@ -19,6 +19,7 @@ app_celery.conf.update(accept_content=['json', 'pickle'])
 def create_app(config):
     app = Flask(__name__)
     app.config.from_object(config)
+    app.url_map.strict_slashes = False
 
     app_database.init_app(app)
     app_migrate.init_app(app)
@@ -26,8 +27,10 @@ def create_app(config):
     
     from .main import main as main_blueprint
     from .auth import auth as auth_blueprint
+    from .api  import api  as api_blueprint
 
     app.register_blueprint(main_blueprint)
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
+    app.register_blueprint(api_blueprint, url_prefix='/api')
 
     return app

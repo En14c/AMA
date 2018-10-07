@@ -1,8 +1,8 @@
 import hashlib, random, datetime
-from faker import Faker
 from werkzeug.security import generate_password_hash, check_password_hash
+from faker import Faker
 from flask_login import UserMixin
-from flask import current_app
+from flask import current_app, jsonify, url_for
 from itsdangerous import TimedJSONWebSignatureSerializer, BadSignature, SignatureExpired
 from confg import TokenExpirationTime
 from . import app_database
@@ -97,6 +97,7 @@ class User(UserMixin, app_database.Model):
     account_confirmed = app_database.Column(app_database.Boolean, default=False)
     about_me = app_database.Column(app_database.String(300))
     avatar_hash = app_database.Column(app_database.String(32))
+    api_auth_token = app_database.Column(app_database.String(300))
     in_questions = app_database.relationship('Question',
                                              foreign_keys=[Question.replier_id],
                                              backref=app_database.backref('replier', lazy='joined'),
@@ -115,6 +116,7 @@ class User(UserMixin, app_database.Model):
                                             backref=app_database.backref('followed', lazy='joined'),
                                             lazy='dynamic',
                                             cascade='all, delete-orphan')
+    
     fake_user_questions_count = 20
     fake_user_answers_count = fake_user_questions_count - 2
     fake_followers_count = 20
@@ -195,6 +197,10 @@ class User(UserMixin, app_database.Model):
     @staticmethod
     def load_user_by_email_addr(email_addr):
         return User.query.filter(User.email == email_addr).first()
+
+    @staticmethod
+    def load_user_by_id(user_id):
+        return User.query.filter(User.id == user_id).first()
 
     @property
     def password(self):
@@ -316,3 +322,144 @@ class User(UserMixin, app_database.Model):
         for follow in self.follows.all():
             followed_list.append(follow.followed)
         return followed_list
+
+    @staticmethod
+    def api_load_user_from_auth_token(auth_token):
+        return User.api_verify_auth_token(auth_token)
+
+    @staticmethod
+    def api_verify_auth_token(auth_token):
+        token_verify = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'])
+        try:
+            token_payload = token_verify.loads(auth_token)
+        except BadSignature:
+            return None
+        return User.load_user_by_id(token_payload.get('auth_token_id', ''))
+
+    def api_generate_auth_token(self, expires_in=TokenExpirationTime.AFTER_15_MIN):
+        token_gen = TimedJSONWebSignatureSerializer(current_app.config['SECRET_KEY'],
+                                                    expires_in=expires_in)
+        token_payload = {'auth_token_id': self.id}
+        self.api_auth_token = token_gen.dumps(token_payload).decode()
+        app_database.session.add(self)
+        app_database.session.commit()
+
+    def api_get_auth_token_json(self):
+        auth_token_data = {
+            'auth_token': self.api_auth_token,
+            'status_code': 200 
+        }
+        return jsonify(auth_token_data)
+
+    def api_get_user_info(self):
+        user_info = {
+            'id': self.id,
+            'username': self.username,
+            'about_me': self.about_me,
+            'avatar_uri': self.generate_gravatar_uri(),
+            '#followers': self.followed_by.count(),
+            '#following': self.follows.count(),
+            'followers': url_for('api.api_get_followers_list', username=self.username,
+                                 p=1,
+                                 _external=True),
+            'following': url_for('api.api_get_followed_users_list', username=self.username,
+                                 p=1,
+                                 _external=True),
+            'account_confirmed': self.account_confirmed,
+            'role': self.role.role_name,
+            'status_code': 200
+        }
+        return user_info
+
+    @staticmethod
+    def api_get_users_list_json(page, users_per_page):
+        users = User.query.paginate(page, users_per_page, False)
+        next_users_list_uri = url_for('api.api_get_users_list', 
+                                      n=users_per_page,
+                                      p=page + 1,
+                                      _external=True) if users.has_next else 'NULL'
+        users_list = {
+            'users': [user.api_get_user_info() for user in users.items],
+            'next': next_users_list_uri,
+            'status_code': 200
+        }
+        return jsonify(users_list)
+    
+    @staticmethod
+    def api_get_followers_list_json(user, page, followers_per_page):
+        follow = user.followed_by.paginate(page, followers_per_page, False)
+        next_followers_uri = url_for('api.api_get_followers_list', 
+                                     username=user.username,
+                                     n=followers_per_page,
+                                     p=page + 1,
+                                     _external=True) if follow.has_next else 'NULL'
+        followers_list = {
+            'followers': [follow.follower.api_get_user_info() for follow in follow.items],
+            'next': next_followers_uri,
+            'status_code': 200
+        }
+        return jsonify(followers_list)
+
+    @staticmethod
+    def api_get_followed_users_list_json(user, page, followed_users_per_page):
+        follow = user.follows.paginate(page, followed_users_per_page, False)
+        next_followed_users_uri = url_for('api.api_get_followed_users_list',
+                                          username=user.username,
+                                          n=followed_users_per_page,
+                                          p=page + 1,
+                                          _external=True) if follow.has_next else 'NULL'
+        followed_users_list = {
+            'following': [follow.followed.api_get_user_info() for follow in follow.items],
+            'next': next_followed_users_uri,
+            'status_code': 200
+        }
+        return jsonify(followed_users_list)
+
+    @staticmethod
+    def api_get_question_info(question):
+        question_info = {
+            'asker': question.asker.username,
+            'replier': question.replier.username,
+            'question': question.question_content,
+            'has_answer': question.has_answer,
+            'answer': question.answer.answer_content if question.has_answer else 'NULL',
+            'date': str(question.timestamp),
+            'status_code': 200
+        }
+        return question_info
+
+    @staticmethod
+    def api_get_answered_questions_json(user, page, questions_per_page):
+        questions = (user.in_questions
+                         .filter(Question.has_answer.is_(True))
+                         .order_by(Question.timestamp.desc())
+                         .paginate(page, questions_per_page, False))
+        next_questions_uri = url_for('api.api_get_user_answered_questions',
+                                     username=user.username,
+                                     n=questions_per_page,
+                                     p=page + 1,
+                                     _external=True) if questions.has_next else 'NULL'
+        answered_questions_list = {
+            'answered_questions': [User.api_get_question_info(q) for q in questions.items],
+            'next': next_questions_uri,
+            'status_code': 200
+        }
+        return jsonify(answered_questions_list)
+
+    @staticmethod
+    def api_get_unanswered_questions_json(user, page, questions_per_page):
+        questions = (user.in_questions
+                         .filter(Question.has_answer.is_(False))
+                         .order_by(Question.timestamp.desc())
+                         .paginate(page, questions_per_page, False))
+        next_questions_uri = url_for('api.api_get_user_unanswered_questions',
+                                     username=user.username,
+                                     n=questions_per_page,
+                                     p=page + 1,
+                                     _external=True) if questions.has_next else 'NULL'
+        unanswered_questions_list = {
+            'unanswered_questions': [User.api_get_question_info(q) for q in questions.items],
+            'next': next_questions_uri,
+            'status_code': 200
+        }
+        return jsonify(unanswered_questions_list)

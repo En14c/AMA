@@ -1,4 +1,5 @@
 import unittest, time
+from itsdangerous import TimedJSONWebSignatureSerializer, BadSignature
 from faker import Faker
 from app import create_app, app_database
 from app.models import User, Role, Question, Answer, Follow
@@ -303,3 +304,45 @@ class TestUserModel(unittest.TestCase):
 
         self.assertIsNone(user1.follows.first())
         self.assertIsNone(user2.followed_by.first())
+
+    def test_api_generate_auth_token(self):
+        fake = Faker()
+        testuser = User(username=fake.user_name())
+        app_database.session.add(testuser)
+        app_database.session.commit()
+        token_verify = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'])
+        testuser.api_generate_auth_token(expires_in=TokenExpirationTime.AFTER_5_MIN)
+
+        self.assertIsNotNone(testuser.api_auth_token)
+        self.assertIsNotNone(token_verify.loads(testuser.api_auth_token).get('auth_token_id'))
+
+        token_payload = token_verify.loads(testuser.api_auth_token)
+        self.assertEqual(token_payload.get('auth_token_id'), testuser.id)
+
+        testuser.api_generate_auth_token(expires_in=TokenExpirationTime.AFTER_0_MIN)
+        time.sleep(3)
+
+        with self.assertRaises(BadSignature):
+            token_verify.loads(testuser.api_auth_token)
+
+    def test_api_verify_auth_token(self):
+        fake = Faker()
+        testuser = User(username=fake.user_name())
+        app_database.session.add(testuser)
+        app_database.session.commit()
+        valid_token_gen = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'],
+                                                          expires_in=TokenExpirationTime.AFTER_5_MIN)
+        invalid_token_gen = TimedJSONWebSignatureSerializer(self.app.config['SECRET_KEY'],
+                                                            expires_in=TokenExpirationTime.AFTER_0_MIN)
+        token_payload = {'auth_token_id': testuser.id}
+        valid_token = valid_token_gen.dumps(token_payload)
+        invalid_token = invalid_token_gen.dumps(token_payload)
+        time.sleep(3)
+
+        self.assertIsNotNone(User.api_verify_auth_token(valid_token))
+        self.assertIsNone(User.api_verify_auth_token(invalid_token))
+
+        token_payload = {'id': testuser.id}
+        valid_token = valid_token_gen.dumps(token_payload)
+
+        self.assertIsNone(User.api_verify_auth_token(valid_token))
