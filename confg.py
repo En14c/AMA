@@ -9,12 +9,11 @@ class TokenExpirationTime:
 
 class AppConfig:
     SECRET_KEY = os.environ.get('SECRET_KEY')
-    SERVER_NAME = os.environ.get('SERVER_NAME')
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    MAIL_SERVER = 'smtp.googlemail.com'
-    MAIL_PORT = 587
-    MAIL_USE_TLS = True
+    MAIL_SERVER = os.environ.get('MAIL_SERVER')
+    MAIL_PORT = os.environ.get('MAIL_PORT')
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS')
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_SENDER = os.environ.get('MAIL_SENDER')
@@ -33,7 +32,7 @@ class AppDevelopmentConfig(AppConfig):
 class AppTestingConfig(AppConfig):
     TESTING = True
     WTF_CSRF_ENABLED = False
-    MAIL_IMAP4_SERVER = 'imap.gmail.com'
+    MAIL_IMAP4_SERVER = os.environ.get('MAIL_IMAP4_SERVER')
     MAIL_TEST_SUBJECT = 'AMA-mail-testing'
     MAIL_TEST_TEMPLATE = 'email/mail_test.txt'
     ADMIN_MAIL_LIST = ['admin@mail.com']
