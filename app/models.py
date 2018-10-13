@@ -264,21 +264,25 @@ class User(UserMixin, app_database.Model):
             return True
         return False
 
-    def get_unanswered_questions(self, num_questions=-1):
+    def get_unanswered_questions(self, questions_limit=None):
         unanswered_questions = []
+        if questions_limit is None or questions_limit < 0:
+            questions_limit = self.in_questions.filter(Question.has_answer.is_(False)).count()
         for question in (self.in_questions
                              .filter(Question.has_answer.is_(False))
                              .order_by(Question.timestamp.desc())
-                             .limit(num_questions).all()):
+                             .limit(questions_limit).all()):
             unanswered_questions.append(question)
         return unanswered_questions
 
-    def get_answered_questions(self, num_questions=-1):
+    def get_answered_questions(self, questions_limit=None):
         answered_questions = []
+        if questions_limit is None or questions_limit < 0:
+            questions_limit = self.in_questions.filter(Question.has_answer.is_(True)).count()
         for question in (self.in_questions
                              .filter(Question.has_answer.is_(True))
                              .order_by(Question.timestamp.desc())
-                             .limit(num_questions).all()):
+                             .limit(questions_limit).all()):
             answered_questions.append(question)
         return answered_questions
 
