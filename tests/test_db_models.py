@@ -168,8 +168,8 @@ class TestUserModel(unittest.TestCase):
 
     def test_is_question_replier_asker(self):
         fake = Faker()
-        q_content = fake.sentence(nb_words=6, variable_nb_words=True, ext_word_list=None)
-        ans_content = fake.sentence(nb_words=6, variable_nb_words=True, ext_word_list=None)
+        q_content = fake.sentence(nb_words=6)
+        ans_content = fake.sentence(nb_words=6)
         testuser1 = User(username=fake.user_name())
         testuser2 = User(username=fake.user_name())
         app_database.session.add_all([testuser1, testuser2])

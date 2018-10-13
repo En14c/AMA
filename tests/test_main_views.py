@@ -328,10 +328,8 @@ class TestMainViews(unittest.TestCase):
 
                 #case [5]
                 question_content_void = ''
-                question_content_long = fake.sentence(nb_words=600, 
-                                                      variable_nb_words=True, ext_word_list=None)
-                question_content_short = fake.sentence(nb_words=50, 
-                                                       variable_nb_words=True, ext_word_list=None)
+                question_content_long = fake.sentence(nb_words=600)
+                question_content_short = fake.sentence(nb_words=10)
                 
                 response = app_test_client.post(url_for('main.user_ask_question',
                                                         username=testuser2.username), 
@@ -406,10 +404,8 @@ class TestMainViews(unittest.TestCase):
 
                 #case [4]
                 answer_content_void = ''
-                answer_content_long = fake.sentence(nb_words=600, 
-                                                    variable_nb_words=True, ext_word_list=None)
-                answer_content_short = fake.sentence(nb_words=40, 
-                                                     variable_nb_words=True, ext_word_list=None)
+                answer_content_long = fake.sentence(nb_words=600)
+                answer_content_short = fake.sentence(nb_words=10)
                 
                 response = app_test_client.post(url_for('main.user_answer_question',
                                                         username=testuser1.username, 

@@ -162,8 +162,7 @@ class TestAPI(unittest.TestCase):
         user_role = Role.load_role_by_name(role_name='user')
         User.generate_fake_users()
         testuser = User(username=fake.user_name(), email=fake.safe_email(), account_confirmed=True,
-                        role=user_role,
-                        about_me=fake.sentence(nb_words=10, variable_nb_words=True, ext_word_list=None))
+                        role=user_role, about_me=fake.sentence(nb_words=10))
         testuser.generate_gravatar_uri()
         app_database.session.add(testuser)
         app_database.session.commit()

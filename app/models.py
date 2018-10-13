@@ -123,18 +123,16 @@ class User(UserMixin, app_database.Model):
     fake_followed_count = fake_followers_count - 2    
 
     @staticmethod
-    def generate_fake_users(count=100, confirm_accounts=True, user_role='user'):
+    def generate_fake_users(count=20, confirm_accounts=True, user_role='user'):
         fake = Faker()
         role = Role.query.filter(Role.role_name == user_role).first()
         if not role:
             return print('[Error] unable to get user role')
         for i in range(0, count):
             user = User(username=fake.user_name(), email=fake.safe_email(),
-                        about_me=fake.sentence(nb_words=50, variable_nb_words=True, 
-                                               ext_word_list=None), role=role,
-                        account_confirmed=confirm_accounts)
-            user.password = fake.password(length=4, special_chars=True, digits=True, 
-                                          upper_case=True, lower_case=True)
+                        about_me=fake.sentence(nb_words=10), role=role, account_confirmed=confirm_accounts)
+            user.password = fake.password(length=4, special_chars=True, digits=True, upper_case=True, 
+                                          lower_case=True)
             app_database.session.add(user)
         app_database.session.commit()
         
@@ -146,10 +144,7 @@ class User(UserMixin, app_database.Model):
             return print('[Error] no user exist with the username provided')
         for i in range(0, count):
             fake_user = User.query.offset(random.randint(0, User.query.count() - 1)).first()
-            fake_user.ask_question(question_content=fake.sentence(nb_words=10, 
-                                                                  variable_nb_words=True, 
-                                                                  ext_word_list=None),
-                                   question_recipient=user)
+            fake_user.ask_question(question_content=fake.sentence(nb_words=10), question_recipient=user)
         app_database.session.commit()
 
     @staticmethod
@@ -162,10 +157,7 @@ class User(UserMixin, app_database.Model):
         for i in range(0, count):
             question = questions.offset(random.randint(0, questions.count() - 1)).first()
             if not question.has_answer:
-                user.answer_question(answer_content=fake.sentence(nb_words=10, 
-                                                                  variable_nb_words=True, 
-                                                                  ext_word_list=None),
-                                     question=question)
+                user.answer_question(answer_content=fake.sentence(nb_words=10), question=question)
         app_database.session.commit()
 
     @staticmethod
