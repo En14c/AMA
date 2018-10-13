@@ -1,0 +1,58 @@
+*** instructions of how to replicate the enivronment and running the application in testing/development state ***
+
+pip install -r requirements.txt
+
+##############################
+required enivronment variables
+##############################
+SECRET_KEY
+TEST_DATABASE_URI
+DEV_DATABASE_URI
+MAIL_USERNAME
+MAIL_PASSWORD
+AMA_MAIL_SENDER
+AMA_TEST_MAIL
+AMA_MSG_BROKER_URI
+FLASK_ENV=development
+MAIL_USERNAME
+MAIL_SENDER
+MAIL_PASSWORD
+AMA_MSG_BROKER_URI
+APPLICATION_STATE --> can be set to one of the following states [testing, development, production]
+RECAPTCHA_SITE_KEY
+RECAPTCHA_SECRET_KEY
+ADMIN_MAIL_LIST --> comma separated values / ** to be loaded from a csv file in a future commit **
+
+
+###############################
+running the application
+###############################
+*** database migration ***
+flask db upgrade
+
+/// if using sqlite ///
+flask db upgrade
+flask db stamp a8176fce55e5
+flask db upgrade
+
+
+*** running the celery worker ***
+celery -A celeryw.app_celery worker --loglevel=info
+
+# development enivronment 
+|
+|
++ *** generating random data for the development enivronment ***
+|     flask generate_random_data
+|
++ *** running the application ***
+      flask run
+
+# testing enivronment
+|
++ [5] flask app_test
+
+
+
+
+
