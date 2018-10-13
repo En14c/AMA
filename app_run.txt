@@ -50,7 +50,7 @@ celery -A celeryw.app_celery worker --loglevel=info
 
 # testing enivronment
 |
-+ [5] flask app_test
++ *** flask app_test ***
 
 
 
