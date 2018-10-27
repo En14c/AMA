@@ -20,7 +20,7 @@ def templates_add_app_permissions():
 def home():
     questions_list = []
     for user in current_user.get_followed_users_list():
-        for question in user.get_answered_questions(num_questions=5):
+        for question in user.get_answered_questions(questions_limit=5):
             questions_list.append(question)
     random.shuffle(questions_list)
     return render_template('main/home.html', questions_list=questions_list)
