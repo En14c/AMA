@@ -1,6 +1,6 @@
 alembic==1.0.0
 amqp==2.3.2
-celery==4.2.1
+celery==5.2.2
 click==6.7
 Faker==0.9.1
 Flask==1.0.2
